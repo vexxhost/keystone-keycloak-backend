@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "keystone-keycloak-backend"
+version = "0.1.0"
+description = "Keycloak backend for OpenStack Keystone"
+authors = ["Mohammed Naser <mnaser@vexxhost.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{include = "keystone_keycloak_backend"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+keystone = ">=22.0.0"
+python-keycloak = "^3.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.plugins."keystone.identity"]
+keycloak = "keystone_keycloak_backend.identity:Driver"
