@@ -139,18 +139,28 @@ class Driver(base.IdentityDriverBase):
             "description": group['path'],
         }
 
+    def _format_groups(self, groups):
+        # NOTE(mnaser): This function exists because the Keycloak API returns
+        #               subGroups so we have to do a bit of recursion to
+        #               flatten the structure.
+        formatted_groups = []
+        for group in groups:
+            formatted_groups.append(self._format_group(group))
+            formatted_groups.extend(self._format_groups(group['subGroups']))
+        return formatted_groups
+
     def create_group(self, group_id, group):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_groups(self, hints):
         # TODO: hints
         groups = self.keycloak.get_groups()
-        return [self._format_group(g) for g in groups]
+        return self._format_groups(groups)
 
     def list_groups_for_user(self, user_id, hints):
         # TODO: hints
         groups = self.keycloak.get_user_groups(user_id)
-        return [self._format_group(g) for g in groups]
+        return self._format_groups(groups)
 
     def get_group(self, group_id):
         try:
