@@ -20,7 +20,6 @@ password = admin
 realm_name = master
 user_realm_name = master
 client_id = admin-cli
-client_secret_key = 0f0f0f0f-0f0f-0f0f-0f0f-0f0f0f0f0f0f
 verify = true
 EOF
 
