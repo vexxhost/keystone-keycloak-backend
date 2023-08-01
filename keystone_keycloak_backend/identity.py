@@ -13,13 +13,14 @@
 # under the License.
 
 from keystone import conf as keystone_conf
+from keystone import exception
 from keystone.identity.backends import base
 
 from keycloak import KeycloakAdmin
 from keycloak import KeycloakOpenIDConnection
+from keycloak import exceptions as keycloak_exceptions
 
 from keystone_keycloak_backend import conf as kkb_conf
-from keystone_keycloak_backend import utils
 
 READ_ONLY_ERROR_MESSAGE = "Keycloak does not support write operations"
 
@@ -60,22 +61,47 @@ class Driver(base.IdentityDriverBase):
         #               going to be used for federated authentication.
         raise AssertionError()
 
+    def _format_user(self, user):
+        return {
+            "id": user['id'],
+            "name": user['username'],
+            # "password":
+            # "password_expires_at":
+            "enabled": user["enabled"],
+            # "default_project_id": 
+        }
+
     def create_user(self, user_id, user):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users(self, hints):
         # TODO(mnaser): Hints
-        return [utils.keycloak_to_keystone_user(u) for u in self.keycloak.get_users()]
+        users = self.keycloak.get_users()
+        return [self._format_user(u) for u in users]
 
     def unset_default_project_id(self, project_id):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users_in_group(self, group_id, hints):
-        # TODO
-        pass
+        # TODO: hints
+        try:
+            users = self.keycloak.get_group_members(group_id)
+        except keycloak_exceptions.KeycloakGetError as e:
+            if e.response_code == 404:
+                raise exception.GroupNotFound(group_id=group_id)
+            raise
+
+        return [self._format_user(u) for u in users]
 
     def get_user(self, user_id):
-        return utils.keycloak_to_keystone_user(self.keycloak.get_user(user_id))
+        try:
+            user = self.keycloak.get_user(user_id)
+        except keycloak_exceptions.KeycloakGetError as e:
+            if e.response_code == 404:
+                raise exception.UserNotFound(user_id=user_id)
+            raise
+
+        return self._format_user(user)
 
     def update_user(self, user_id, user):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
@@ -87,8 +113,12 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def check_user_in_group(self, user_id, group_id):
-        # TODO
-        pass
+        user_groups = self.keycloak.get_user_groups(user_id)
+        user_group_ids = [g['id'] for g in user_groups]
+
+        if group_id not in user_group_ids:
+            raise exception.NotFound()
+        return True
 
     def remove_user_from_group(self, user_id, group_id):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
@@ -97,27 +127,46 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def get_user_by_name(self, user_name, domain_id):
-        # TODO
-        pass
+        users = self.keycloak.get_users(query={"username": user_name, "max": 1, "exact": True})
+        if len(users) == 0 or users[0]['username'] != user_name:
+            raise exception.UserNotFound(user_id=user_name)
+        return self._format_user(users[0])
+
+    def _format_group(self, group):
+        return {
+            "id": group['id'],
+            "name": group['name'],
+            "description": group['path'],
+        }
 
     def create_group(self, group_id, group):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_groups(self, hints):
-        # TODO
-        pass
+        # TODO: hints
+        groups = self.keycloak.get_groups()
+        return [self._format_group(g) for g in groups]
 
     def list_groups_for_user(self, user_id, hints):
-        # TODO
-        pass
+        # TODO: hints
+        groups = self.keycloak.get_user_groups(user_id)
+        return [self._format_group(g) for g in groups]
 
     def get_group(self, group_id):
-        # TODO
-        pass
+        try:
+            group = self.keycloak.get_group(group_id)
+        except keycloak_exceptions.KeycloakGetError as e:
+            if e.response_code == 404:
+                raise exception.GroupNotFound(group_id=group_id)
+            raise
+
+        return self._format_group(group)
 
     def get_group_by_name(self, group_name, domain_id):
-        # TODO
-        pass
+        groups = self.keycloak.get_groups(query={"name": group_name, "max": 1, "exact": True})
+        if len(groups) == 0 or groups[0]['name'] != group_name:
+            raise exception.GroupNotFound(group_id=group_name)
+        return self._format_group(groups[0])
 
     def update_group(self, group_id, group):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
