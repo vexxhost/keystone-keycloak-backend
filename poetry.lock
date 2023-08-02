@@ -68,6 +68,17 @@ tests = ["attrs[tests-no-zope]", "zope-interface"]
 tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=1.1.1)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-xdist[psutil]"]
 
 [[package]]
+name = "autopage"
+version = "0.5.1"
+description = "A library to provide automatic paging for console output"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "autopage-0.5.1-py3-none-any.whl", hash = "sha256:0fbf5efbe78d466a26753e1dee3272423a3adc989d6a778c700e89a3f8ff0d88"},
+    {file = "autopage-0.5.1.tar.gz", hash = "sha256:01be3ee61bb714e9090fcc5c10f4cf546c396331c620c6ae50a2321b28ed3199"},
+]
+
+[[package]]
 name = "backports-zoneinfo"
 version = "0.2.1"
 description = "Backport of the standard library zoneinfo module"
@@ -340,6 +351,47 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cliff"
+version = "4.3.0"
+description = "Command Line Interface Formulation Framework"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "cliff-4.3.0-py3-none-any.whl", hash = "sha256:db3dc8774f47db9aa86796921ff158d0f023630261c2746c4fff12584b75f5b2"},
+    {file = "cliff-4.3.0.tar.gz", hash = "sha256:fc5b6ebc8fb815332770b2485ee36c09753937c37cce4f3227cdd4e10b33eacc"},
+]
+
+[package.dependencies]
+autopage = ">=0.4.0"
+cmd2 = ">=1.0.0"
+importlib-metadata = ">=4.4"
+PrettyTable = ">=0.7.2"
+PyYAML = ">=3.12"
+stevedore = ">=2.0.1"
+
+[[package]]
+name = "cmd2"
+version = "2.4.3"
+description = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "cmd2-2.4.3-py3-none-any.whl", hash = "sha256:f1988ff2fff0ed812a2d25218a081b0fa0108d45b48ba2a9272bb98091b654e6"},
+    {file = "cmd2-2.4.3.tar.gz", hash = "sha256:71873c11f72bd19e2b1db578214716f0d4f7c8fa250093c601265a9a717dee52"},
+]
+
+[package.dependencies]
+attrs = ">=16.3.0"
+pyperclip = ">=1.6"
+pyreadline3 = {version = "*", markers = "sys_platform == \"win32\""}
+wcwidth = ">=0.1.7"
+
+[package.extras]
+dev = ["codecov", "doc8", "flake8", "invoke", "mypy", "nox", "pytest (>=4.6)", "pytest-cov", "pytest-mock", "sphinx", "sphinx-autobuild", "sphinx-rtd-theme", "twine (>=1.11)"]
+test = ["codecov", "coverage", "gnureadline", "pytest (>=4.6)", "pytest-cov", "pytest-mock"]
+validate = ["flake8", "mypy", "types-pkg-resources"]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -529,6 +581,17 @@ greenlet = ">=0.3"
 six = ">=1.10.0"
 
 [[package]]
+name = "extras"
+version = "1.0.0"
+description = "Useful extra bits for Python - things that shold be in the standard library"
+optional = false
+python-versions = "*"
+files = [
+    {file = "extras-1.0.0-py2.py3-none-any.whl", hash = "sha256:f689f08df47e2decf76aa6208c081306e7bd472630eb1ec8a875c67de2366e87"},
+    {file = "extras-1.0.0.tar.gz", hash = "sha256:132e36de10b9c91d5d4cc620160a476e0468a88f16c9431817a6729611a81b4e"},
+]
+
+[[package]]
 name = "fasteners"
 version = "0.18"
 description = "A python package that provides useful locks"
@@ -600,6 +663,16 @@ six = ">=1.3.0"
 
 [package.extras]
 docs = ["sphinx"]
+
+[[package]]
+name = "future"
+version = "0.18.3"
+description = "Clean single-source support for Python 3 and 2"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+files = [
+    {file = "future-0.18.3.tar.gz", hash = "sha256:34a17436ed1e96697a86f9de3d15a3b0be01d8bc8de9c1dffd59fb8234ed5307"},
+]
 
 [[package]]
 name = "futurist"
@@ -952,6 +1025,21 @@ sqlalchemy = ["sqlalchemy (>=1.4.48,<2.1)"]
 sqs = ["boto3 (>=1.26.143)", "pycurl (>=7.43.0.5)", "urllib3 (>=1.26.16)"]
 yaml = ["PyYAML (>=3.10)"]
 zookeeper = ["kazoo (>=2.8.0)"]
+
+[[package]]
+name = "ldappool"
+version = "3.0.0"
+description = "A simple connector pool for python-ldap."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "ldappool-3.0.0-py3-none-any.whl", hash = "sha256:19eafe96a2af403bb04b2b78bcaf195d6b0e8fe847eeecb1379222493aa96530"},
+    {file = "ldappool-3.0.0.tar.gz", hash = "sha256:4bb59b7d6b11407f48ee01a781267e3c8ba98d91f426806ac7208612ae087b86"},
+]
+
+[package.dependencies]
+PrettyTable = ">=0.7.2"
+python-ldap = ">=3.0.0"
 
 [[package]]
 name = "mako"
@@ -1666,6 +1754,20 @@ files = [
 ]
 
 [[package]]
+name = "pyasn1-modules"
+version = "0.3.0"
+description = "A collection of ASN.1-based protocols modules"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
+files = [
+    {file = "pyasn1_modules-0.3.0-py2.py3-none-any.whl", hash = "sha256:d3ccd6ed470d9ffbc716be08bd90efbd44d0734bc9303818f7336070984a162d"},
+    {file = "pyasn1_modules-0.3.0.tar.gz", hash = "sha256:5bd01446b736eb9d31512a30d46c1ac3395d676c6f3cafa4c03eb54b9925631c"},
+]
+
+[package.dependencies]
+pyasn1 = ">=0.4.6,<0.6.0"
+
+[[package]]
 name = "pycadf"
 version = "3.1.1"
 description = "CADF Library"
@@ -1752,6 +1854,27 @@ files = [
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyperclip"
+version = "1.8.2"
+description = "A cross-platform clipboard module for Python. (Only handles plain text for now.)"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyperclip-1.8.2.tar.gz", hash = "sha256:105254a8b04934f0bc84e9c24eb360a591aaf6535c9def5f29d92af107a9bf57"},
+]
+
+[[package]]
+name = "pyreadline3"
+version = "3.4.1"
+description = "A python implementation of GNU readline."
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyreadline3-3.4.1-py3-none-any.whl", hash = "sha256:b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb"},
+    {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
+]
 
 [[package]]
 name = "pysaml2"
@@ -1855,6 +1978,39 @@ pbr = ">=2.0.0,<2.1.0 || >2.1.0"
 requests = ">=2.14.2"
 six = ">=1.10.0"
 stevedore = ">=1.20.0"
+
+[[package]]
+name = "python-ldap"
+version = "3.4.3"
+description = "Python modules for implementing LDAP clients"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "python-ldap-3.4.3.tar.gz", hash = "sha256:ab26c519a0ef2a443a2a10391fa3c5cb52d7871323399db949ebfaa9f25ee2a0"},
+]
+
+[package.dependencies]
+pyasn1 = ">=0.3.7"
+pyasn1_modules = ">=0.1.5"
+
+[[package]]
+name = "python-subunit"
+version = "1.4.2"
+description = "Python implementation of subunit test streaming protocol"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "python-subunit-1.4.2.tar.gz", hash = "sha256:2988d324d55ec35dd037e502e3f74ac38f4e457bd44ee0edf5e898f7ee1134d4"},
+    {file = "python_subunit-1.4.2-py3-none-any.whl", hash = "sha256:c08d6de7e09bf6ac69dcd8e4e57a247a267d1e786493ba559cfb744747d82c8c"},
+]
+
+[package.dependencies]
+extras = "*"
+testtools = ">=0.9.34"
+
+[package.extras]
+docs = ["docutils"]
+test = ["fixtures", "hypothesis", "testscenarios"]
 
 [[package]]
 name = "pytz"
@@ -2333,6 +2489,31 @@ files = [
 ]
 
 [[package]]
+name = "stestr"
+version = "4.0.1"
+description = "A parallel Python test runner built around subunit"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "stestr-4.0.1-py3-none-any.whl", hash = "sha256:b848dd2b558acdd07db855a4210a020f4b4c57e4c9a5d05ca0f99f96db1c0c58"},
+    {file = "stestr-4.0.1.tar.gz", hash = "sha256:c2c1c73bfc7cfca39127159e3fbc74193aebf2cd02d8a0427f2e58648e36cf26"},
+]
+
+[package.dependencies]
+cliff = ">=2.8.0"
+fixtures = ">=3.0.0"
+future = "*"
+pbr = ">=2.0.0,<2.1.0 || >2.1.0,<4.0.0 || >4.0.0,<4.0.1 || >4.0.1,<4.0.2 || >4.0.2,<4.0.3 || >4.0.3"
+python-subunit = ">=1.4.0"
+PyYAML = ">=3.10.0"
+testtools = ">=2.2.0"
+voluptuous = ">=0.8.9"
+
+[package.extras]
+sql = ["subunit2sql (>=1.8.0)"]
+test = ["coverage (>=4.0)", "ddt (>=1.0.1)", "doc8 (>=0.8.0)", "hacking (>=3.1.0,<3.2.0)", "sphinx (>2.1.0)"]
+
+[[package]]
 name = "stevedore"
 version = "5.1.0"
 description = "Manage dynamic plugins for Python applications"
@@ -2456,6 +2637,17 @@ python-versions = ">=3.6"
 files = [
     {file = "vine-5.0.0-py2.py3-none-any.whl", hash = "sha256:4c9dceab6f76ed92105027c49c823800dd33cacce13bdedc5b914e3514b7fb30"},
     {file = "vine-5.0.0.tar.gz", hash = "sha256:7d3b1624a953da82ef63462013bbd271d3eb75751489f9807598e8f340bd637e"},
+]
+
+[[package]]
+name = "voluptuous"
+version = "0.13.1"
+description = ""
+optional = false
+python-versions = "*"
+files = [
+    {file = "voluptuous-0.13.1-py3-none-any.whl", hash = "sha256:4b838b185f5951f2d6e8752b68fcf18bd7a9c26ded8f143f92d6d28f3921a3e6"},
+    {file = "voluptuous-0.13.1.tar.gz", hash = "sha256:e8d31c20601d6773cb14d4c0f42aee29c6821bbd1018039aac7ac5605b489723"},
 ]
 
 [[package]]
@@ -2677,4 +2869,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "62fb42603eee294075af84579bd550d4a9bd69112dc18ea0dcbc080c9c47a4e1"
+content-hash = "540d9c53b190a6bc6a91921953aa129938f79234e52ec71529f85516afbdf54b"

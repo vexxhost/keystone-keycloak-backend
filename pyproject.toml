@@ -12,6 +12,10 @@ python = "^3.8"
 keystone = ">=22.0.0"
 python-keycloak = "^3.3.0"
 
+[tool.poetry.group.dev.dependencies]
+stestr = "^4.0.1"
+ldappool = "^3.0.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
