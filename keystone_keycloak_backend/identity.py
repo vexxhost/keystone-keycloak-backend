@@ -16,6 +16,7 @@ from keycloak import KeycloakAdmin, KeycloakOpenIDConnection
 from keycloak import exceptions as keycloak_exceptions
 from keystone import exception
 from keystone.identity.backends import base
+
 from keystone_keycloak_backend import conf as kkb_conf
 
 READ_ONLY_ERROR_MESSAGE = "Keycloak does not support write operations"
