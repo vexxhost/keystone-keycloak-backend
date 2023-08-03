@@ -18,3 +18,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.plugins."keystone.identity"]
 keycloak = "keystone_keycloak_backend.identity:Driver"
+
+[tool.isort]
+profile = "black"
