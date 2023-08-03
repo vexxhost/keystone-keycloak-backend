@@ -14,7 +14,6 @@
 
 from oslo_config import cfg
 
-
 keycloak_group = cfg.OptGroup(
     name="keycloak",
     title="Options for Keycloak backend",

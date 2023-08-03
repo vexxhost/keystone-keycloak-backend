@@ -12,14 +12,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from keystone import conf as keystone_conf
+from keycloak import KeycloakAdmin, KeycloakOpenIDConnection
+from keycloak import exceptions as keycloak_exceptions
 from keystone import exception
 from keystone.identity.backends import base
-
-from keycloak import KeycloakAdmin
-from keycloak import KeycloakOpenIDConnection
-from keycloak import exceptions as keycloak_exceptions
-
 from keystone_keycloak_backend import conf as kkb_conf
 
 READ_ONLY_ERROR_MESSAGE = "Keycloak does not support write operations"
@@ -30,8 +26,6 @@ class Driver(base.IdentityDriverBase):
         super(Driver, self).__init__()
 
         self.conf = conf
-        if conf is None:
-            self.conf = CONF
         kkb_conf.register_opts(self.conf)
 
         self.keycloak = KeycloakAdmin(
@@ -63,12 +57,12 @@ class Driver(base.IdentityDriverBase):
 
     def _format_user(self, user):
         return {
-            "id": user['id'],
-            "name": user['username'],
+            "id": user["id"],
+            "name": user["username"],
             # "password":
             # "password_expires_at":
             "enabled": user["enabled"],
-            # "default_project_id": 
+            # "default_project_id":
         }
 
     def create_user(self, user_id, user):
@@ -114,7 +108,7 @@ class Driver(base.IdentityDriverBase):
 
     def check_user_in_group(self, user_id, group_id):
         user_groups = self.keycloak.get_user_groups(user_id)
-        user_group_ids = [g['id'] for g in user_groups]
+        user_group_ids = [g["id"] for g in user_groups]
 
         if group_id not in user_group_ids:
             raise exception.NotFound()
@@ -127,16 +121,18 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def get_user_by_name(self, user_name, domain_id):
-        users = self.keycloak.get_users(query={"username": user_name, "max": 1, "exact": True})
-        if len(users) == 0 or users[0]['username'] != user_name:
+        users = self.keycloak.get_users(
+            query={"username": user_name, "max": 1, "exact": True}
+        )
+        if len(users) == 0 or users[0]["username"] != user_name:
             raise exception.UserNotFound(user_id=user_name)
         return self._format_user(users[0])
 
     def _format_group(self, group):
         return {
-            "id": group['id'],
-            "name": group['name'],
-            "description": group['path'],
+            "id": group["id"],
+            "name": group["name"],
+            "description": group["path"],
         }
 
     def _format_groups(self, groups):
@@ -146,7 +142,7 @@ class Driver(base.IdentityDriverBase):
         formatted_groups = []
         for group in groups:
             formatted_groups.append(self._format_group(group))
-            formatted_groups.extend(self._format_groups(group['subGroups']))
+            formatted_groups.extend(self._format_groups(group["subGroups"]))
         return formatted_groups
 
     def create_group(self, group_id, group):
@@ -173,8 +169,10 @@ class Driver(base.IdentityDriverBase):
         return self._format_group(group)
 
     def get_group_by_name(self, group_name, domain_id):
-        groups = self.keycloak.get_groups(query={"name": group_name, "max": 1, "exact": True})
-        if len(groups) == 0 or groups[0]['name'] != group_name:
+        groups = self.keycloak.get_groups(
+            query={"name": group_name, "max": 1, "exact": True}
+        )
+        if len(groups) == 0 or groups[0]["name"] != group_name:
             raise exception.GroupNotFound(group_id=group_name)
         return self._format_group(groups[0])
 
