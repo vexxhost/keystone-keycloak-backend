@@ -10,7 +10,7 @@ packages = [{include = "keystone_keycloak_backend"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 keystone = ">=22.0.0"
-python-keycloak = "^3.3.0"
+python-keycloak = { git = "https://github.com/mnaser/python-keycloak.git", branch = "chore/loosen-deps" }
 
 [build-system]
 requires = ["poetry-core"]
