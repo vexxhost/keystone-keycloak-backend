@@ -10,7 +10,14 @@ packages = [{include = "keystone_keycloak_backend"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 keystone = ">=22.0.0"
-python-keycloak = "^3.3.0"
+# NOTE(mnaser): This is a list of dependencies for "python-keycloak" since we
+#               are vendoring it until we can get the changes merged upstream.
+#
+#               https://github.com/marcospereirampj/python-keycloak/pull/473
+requests = ">=2.20.0"
+python-jose = ">=3.3.0"
+requests-toolbelt = "*"
+deprecation = ">=2.1.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -18,6 +25,13 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.plugins."keystone.identity"]
 keycloak = "keystone_keycloak_backend.identity:Driver"
+
+[tool.black]
+extend-exclude = '''
+/(
+  keystone_keycloak_backend/_vendor
+)/
+'''
 
 [tool.isort]
 profile = "black"

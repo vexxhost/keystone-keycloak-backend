@@ -20,7 +20,7 @@ In order to test this project, you will need both Docker and Docker Compose
 installed on your system.  You can bring up a test environment by running:
 
 ```bash
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 This will bring up a Keycloak instance and a Keystone instance, you can then
