@@ -12,12 +12,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from keycloak import KeycloakAdmin, KeycloakOpenIDConnection
-from keycloak import exceptions as keycloak_exceptions
 from keystone import exception
 from keystone.identity.backends import base
 
-from keystone_keycloak_backend import conf as kkb_conf
+from keystone_keycloak_backend import config
+from keystone_keycloak_backend._vendor.keycloak import (
+    KeycloakAdmin,
+    KeycloakOpenIDConnection,
+)
+from keystone_keycloak_backend._vendor.keycloak import exceptions as keycloak_exceptions
 
 READ_ONLY_ERROR_MESSAGE = "Keycloak does not support write operations"
 
@@ -27,19 +30,23 @@ class Driver(base.IdentityDriverBase):
         super(Driver, self).__init__()
 
         self.conf = conf
-        kkb_conf.register_opts(self.conf)
+        config.register_opts(self.conf)
 
-        self.keycloak = KeycloakAdmin(
-            connection=KeycloakOpenIDConnection(
-                server_url=self.conf.keycloak.server_url,
-                username=self.conf.keycloak.username,
-                password=self.conf.keycloak.password,
-                realm_name=self.conf.keycloak.realm_name,
-                user_realm_name=self.conf.keycloak.user_realm_name,
-                client_id=self.conf.keycloak.client_id,
-                verify=self.conf.keycloak.verify,
+    @property
+    def keycloak(self):
+        if not hasattr(self, "_keycloak"):
+            self._keycloak = KeycloakAdmin(
+                connection=KeycloakOpenIDConnection(
+                    server_url=self.conf.keycloak.server_url,
+                    username=self.conf.keycloak.username,
+                    password=self.conf.keycloak.password,
+                    realm_name=self.conf.keycloak.realm_name,
+                    user_realm_name=self.conf.keycloak.user_realm_name,
+                    client_id=self.conf.keycloak.client_id,
+                    verify=self.conf.keycloak.verify,
+                )
             )
-        )
+        return self._keycloak
 
     def is_domain_aware(self):
         # TODO(mnaser): check this

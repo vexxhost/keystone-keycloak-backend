@@ -10,7 +10,14 @@ packages = [{include = "keystone_keycloak_backend"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 keystone = ">=22.0.0"
-python-keycloak = { git = "https://github.com/mnaser/python-keycloak.git", branch = "chore/loosen-deps" }
+# NOTE(mnaser): This is a list of dependencies for "python-keycloak" since we
+#               are vendoring it until we can get the changes merged upstream.
+#
+#               https://github.com/marcospereirampj/python-keycloak/pull/473
+requests = ">=2.20.0"
+python-jose = ">=3.3.0"
+requests-toolbelt = "*"
+deprecation = ">=2.1.0"
 
 [build-system]
 requires = ["poetry-core"]
