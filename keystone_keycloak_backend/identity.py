@@ -68,7 +68,9 @@ class Driver(base.IdentityDriverBase):
             "id": user["id"],
             "name": user["username"],
             # "password":
-            # "password_expires_at":
+            # TODO(mnaser): We should probably find a way to scrape into the
+            #               credentials API and return the expiry date.
+            "password_expires_at": None,
             "enabled": user["enabled"],
             # "default_project_id":
             # NOTE(mnaser): This is required or we'll fail with a KeyError
