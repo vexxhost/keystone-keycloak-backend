@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.3...v0.1.4) (2023-08-16)
+
+
+### Bug Fixes
+
+* add password_expires_at ([7103ca0](https://github.com/vexxhost/keystone-keycloak-backend/commit/7103ca0a93ee9273d4692563208ad998358abccd))
+
 ## [0.1.3](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.2...v0.1.3) (2023-08-16)
 
 
