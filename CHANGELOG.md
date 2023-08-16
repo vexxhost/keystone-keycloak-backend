@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.2...v0.1.3) (2023-08-16)
+
+
+### Bug Fixes
+
+* KeyError on federated auth ([fe8ce19](https://github.com/vexxhost/keystone-keycloak-backend/commit/fe8ce19fd1791c80a41aae3f91a7287db66efb76))
+
 ## [0.1.2](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.1...v0.1.2) (2023-08-16)
 
 
