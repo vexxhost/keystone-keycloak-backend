@@ -71,6 +71,9 @@ class Driver(base.IdentityDriverBase):
             # "password_expires_at":
             "enabled": user["enabled"],
             # "default_project_id":
+            # NOTE(mnaser): This is required or we'll fail with a KeyError
+            #               https://bugs.launchpad.net/keystone/+bug/1662762
+            "options": {},
         }
 
     def create_user(self, user_id, user):
