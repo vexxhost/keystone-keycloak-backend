@@ -155,7 +155,8 @@ class Driver(base.IdentityDriverBase):
         formatted_groups = []
         for group in groups:
             formatted_groups.append(self._format_group(group))
-            formatted_groups.extend(self._format_groups(group["subGroups"]))
+            if "subGroups" in group:
+                formatted_groups.extend(self._format_groups(group["subGroups"]))
         return formatted_groups
 
     def create_group(self, group_id, group):
