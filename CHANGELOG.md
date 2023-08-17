@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.4...v0.1.5) (2023-08-17)
+
+
+### Bug Fixes
+
+* only add groups iff there is subgroups ([6360479](https://github.com/vexxhost/keystone-keycloak-backend/commit/63604793eff2d1d1b56249bad79bc435eebfa596))
+
 ## [0.1.4](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.3...v0.1.4) (2023-08-16)
 
 
