@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import uuid
+
 from keystone import exception
 from keystone.identity.backends import base
 
@@ -53,6 +55,7 @@ class Driver(base.IdentityDriverBase):
         return False
 
     def authenticate(self, user_id, password):
+        user_id = uuid.UUID(user_id)
         user = self.keycloak.get_user(user_id)
         if user is None:
             raise exception.UserNotFound(user_id=user_id)
@@ -64,8 +67,10 @@ class Driver(base.IdentityDriverBase):
         raise AssertionError()
 
     def _format_user(self, user):
+        user_id = uuid.UUID(user["id"])
+
         return {
-            "id": user["id"],
+            "id": user_id.hex,
             "name": user["username"],
             # "password":
             # TODO(mnaser): We should probably find a way to scrape into the
@@ -91,6 +96,8 @@ class Driver(base.IdentityDriverBase):
 
     def list_users_in_group(self, group_id, hints):
         # TODO: hints
+        group_id = uuid.UUID(group_id)
+
         try:
             users = self.keycloak.get_group_members(group_id)
         except keycloak_exceptions.KeycloakGetError as e:
@@ -101,6 +108,8 @@ class Driver(base.IdentityDriverBase):
         return [self._format_user(u) for u in users]
 
     def get_user(self, user_id):
+        user_id = uuid.UUID(user_id)
+
         try:
             user = self.keycloak.get_user(user_id)
         except keycloak_exceptions.KeycloakGetError as e:
@@ -120,10 +129,13 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def check_user_in_group(self, user_id, group_id):
+        user_id = uuid.UUID(user_id)
+        group_id = uuid.UUID(group_id)
+
         user_groups = self.keycloak.get_user_groups(user_id)
         user_group_ids = [g["id"] for g in user_groups]
 
-        if group_id not in user_group_ids:
+        if str(group_id) not in user_group_ids:
             raise exception.NotFound()
         return True
 
@@ -142,8 +154,10 @@ class Driver(base.IdentityDriverBase):
         return self._format_user(users[0])
 
     def _format_group(self, group):
+        group_id = uuid.UUID(group["id"])
+
         return {
-            "id": group["id"],
+            "id": group_id.hex,
             "name": group["name"],
             "description": group["path"],
         }
@@ -169,10 +183,13 @@ class Driver(base.IdentityDriverBase):
 
     def list_groups_for_user(self, user_id, hints):
         # TODO: hints
+        user_id = uuid.UUID(user_id)
         groups = self.keycloak.get_user_groups(user_id)
         return self._format_groups(groups)
 
     def get_group(self, group_id):
+        group_id = uuid.UUID(group_id)
+
         try:
             group = self.keycloak.get_group(group_id)
         except keycloak_exceptions.KeycloakGetError as e:
