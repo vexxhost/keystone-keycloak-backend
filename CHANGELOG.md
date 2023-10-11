@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.5...v0.1.6) (2023-10-11)
+
+
+### Miscellaneous Chores
+
+* release 0.1.6 ([a5feb70](https://github.com/vexxhost/keystone-keycloak-backend/commit/a5feb70d09f7623604fcbd9c2f001f74285a95d5))
+
 ## [0.1.5](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.4...v0.1.5) (2023-08-17)
 
 
