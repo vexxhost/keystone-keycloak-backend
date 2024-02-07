@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keystone-keycloak-backend"
-version = "0.1.6"
+version = "0.1.7"
 description = "Keycloak backend for OpenStack Keystone"
 authors = ["Mohammed Naser <mnaser@vexxhost.com>"]
 license = "Apache-2.0"
