@@ -1,4 +1,0 @@
-target = "keystone_keycloak_backend/_vendor"
-packages = [
-    "python-keycloak",
-]
