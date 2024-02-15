@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.6...v0.1.7) (2024-02-07)
+
+
+### Miscellaneous Chores
+
+* switch python-keycloak to dependencies ([1d9017a](https://github.com/vexxhost/keystone-keycloak-backend/commit/1d9017a737d1aa35d679c78820abf761d79c92b2))
+
 ## [0.1.6](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.5...v0.1.6) (2023-10-11)
 
 
