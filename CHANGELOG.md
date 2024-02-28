@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.7...v0.1.8) (2024-02-23)
+
+
+### Bug Fixes
+
+* remove vendor keycloak use ([3ec569d](https://github.com/vexxhost/keystone-keycloak-backend/commit/3ec569d5323c6f3272f8599fe6f41d535289a04d))
+
 ## [0.1.7](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.6...v0.1.7) (2024-02-07)
 
 
