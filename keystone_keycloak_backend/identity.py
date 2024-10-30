@@ -142,6 +142,9 @@ class Driver(base.IdentityDriverBase):
     def delete_user(self, user_id):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
+    def reset_last_active(self):
+        raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
+
     def get_user_by_name(self, user_name, domain_id):
         users = self.keycloak.get_users(
             query={"username": user_name, "max": 1, "exact": True}
