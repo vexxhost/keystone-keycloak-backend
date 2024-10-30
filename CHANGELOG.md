@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.8...v0.2.0) (2024-10-30)
+
+
+### Miscellaneous Chores
+
+* release 0.2.0 ([a8377e6](https://github.com/vexxhost/keystone-keycloak-backend/commit/a8377e64bee169f590b62ed839ce3b45df104ef1))
+
 ## [0.1.8](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.7...v0.1.8) (2024-02-23)
 
 
