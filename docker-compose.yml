@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   database:
-    image: mariadb:10.11
+    image: mariadb:12.0
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: keystone
