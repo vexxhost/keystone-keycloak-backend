@@ -13,6 +13,8 @@ python-keycloak = "^3.6.1"
 
 [tool.poetry.group.dev.dependencies]
 keystone = ">=22.0.0"
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]
