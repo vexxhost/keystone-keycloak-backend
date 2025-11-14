@@ -1,16 +1,5 @@
-# Copyright 2023 VEXXHOST, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
+# Copyright (c) 2025 VEXXHOST, Inc.
+# SPDX-License-Identifier: Apache-2.0
 
 import uuid
 
@@ -66,7 +55,7 @@ class Driver(base.IdentityDriverBase):
     def _format_user(self, user):
         user_id = uuid.UUID(user["id"])
 
-        return {
+        formatted_user = {
             "id": user_id.hex,
             "name": user["username"],
             # "password":
@@ -79,6 +68,33 @@ class Driver(base.IdentityDriverBase):
             #               https://bugs.launchpad.net/keystone/+bug/1662762
             "options": {},
         }
+
+        # Combine Keycloak firstName and lastName into Keystone's
+        # `description` field. Keystone's user schema for this backend
+        # doesn't expose first_name/last_name fields directly, so we
+        # put a combined display name into `description`.
+        #
+        # Handle edge cases: None, empty strings, whitespace-only values
+        # should be ignored. If both parts are missing/empty, don't set
+        # the description key.
+        first = user.get("firstName")
+        last = user.get("lastName")
+
+        name_parts = []
+        if first and str(first).strip():
+            name_parts.append(str(first).strip())
+        if last and str(last).strip():
+            name_parts.append(str(last).strip())
+
+        if name_parts:
+            # Join with single space, e.g. "Name Surname", "Name", or "Surname"
+            formatted_user["description"] = " ".join(name_parts)
+
+        # Add email if available from Keycloak user object
+        if user.get("email"):
+            formatted_user["email"] = user["email"]
+
+        return formatted_user
 
     def create_user(self, user_id, user):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
