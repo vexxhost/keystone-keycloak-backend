@@ -1,26 +1,26 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "keystone-keycloak-backend"
 version = "0.2.0"
 description = "Keycloak backend for OpenStack Keystone"
-authors = ["Mohammed Naser <mnaser@vexxhost.com>"]
-license = "Apache-2.0"
 readme = "README.md"
-packages = [{include = "keystone_keycloak_backend"}]
+requires-python = ">=3.8"
+license = "Apache-2.0"
+dependencies = [
+    "python-keycloak>=3.6.1",
+]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-python-keycloak = "^3.6.1"
+[dependency-groups]
+dev = [
+    "keystone>=26.0.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=5.0.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-keystone = ">=22.0.0"
-pytest = "^7.4.0"
-pytest-cov = "^4.1.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.plugins."keystone.identity"]
+[project.entry-points."keystone.identity"]
 keycloak = "keystone_keycloak_backend.identity:Driver"
 
 [tool.isort]
