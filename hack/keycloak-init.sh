@@ -19,8 +19,8 @@ echo "Keycloak is ready, disable SSL..."
 /opt/keycloak/bin/kcadm.sh config credentials \
   --server http://localhost:8080 \
   --realm master \
-  --user "${KEYCLOAK_ADMIN}" \
-  --password "${KEYCLOAK_ADMIN_PASSWORD}"
+  --user "${KC_BOOTSTRAP_ADMIN_USERNAME}" \
+  --password "${KC_BOOTSTRAP_ADMIN_PASSWORD}"
 
 # Disable SSL requirement
 /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE

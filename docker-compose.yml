@@ -6,14 +6,20 @@ services:
       MYSQL_DATABASE: keystone
       MYSQL_USER: keystone
       MYSQL_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.5-0
+    image: quay.io/keycloak/keycloak:26.4.5-0
     ports:
       - 18080:8080
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     volumes:
       - ./hack/keycloak-init.sh:/opt/keycloak/keycloak-init.sh
     entrypoint: ["/bin/bash", "/opt/keycloak/keycloak-init.sh"]
@@ -23,5 +29,7 @@ services:
     ports:
       - 15000:5000
     depends_on:
-      - database
-      - keycloak
+      database:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
