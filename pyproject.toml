@@ -8,10 +8,8 @@ readme = "README.md"
 packages = [{include = "keystone_keycloak_backend"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-python-keycloak = "4.6.2"
-packaging = ">=23.1"
-httpx = ">=0.23.2,<0.28.0"
+python = "^3.9"
+python-keycloak = "^5.8.1"
 
 [tool.poetry.group.dev.dependencies]
 keystone = ">=22.0.0"
