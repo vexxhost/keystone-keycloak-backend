@@ -22,7 +22,7 @@ client_secret_key = 12345abcdeFGHIJKLMN67890qrstuvWXYZ
 debug = false
 EOF
 
-cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak-deprecated.conf
+cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak-legacy.conf
 [identity]
 driver = keycloak
 
@@ -71,7 +71,7 @@ domains = [
   },
   {
     'id': uuid.uuid4().hex,
-    'name': 'keycloak-deprecated',
+    'name': 'keycloak-legacy',
     'enabled': True,
   }
 ]

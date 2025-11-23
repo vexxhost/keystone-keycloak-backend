@@ -1,8 +1,8 @@
 # Copyright (c) 2025 VEXXHOST, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-import uuid
 import logging
+import uuid
 
 from keycloak import KeycloakAdmin, KeycloakOpenID
 from keycloak import exceptions as keycloak_exceptions
@@ -141,8 +141,9 @@ class Driver(base.IdentityDriverBase):
                 LOG.warning(
                     f"KEYCLOAK_DEBUG: Target Realm: {self.conf.keycloak.realm_name}"
                 )
+                user_realm = getattr(self.conf.keycloak, 'user_realm_name', None) or self.conf.keycloak.realm_name
                 LOG.warning(
-                    f"KEYCLOAK_DEBUG: Auth Realm: {getattr(self.conf.keycloak, 'user_realm_name', None) or self.conf.keycloak.realm_name}"
+                    f"KEYCLOAK_DEBUG: Auth Realm: {user_realm}"
                 )
                 LOG.warning(
                     f"KEYCLOAK_DEBUG: Client ID: {self.conf.keycloak.client_id}"
@@ -215,14 +216,17 @@ class Driver(base.IdentityDriverBase):
         if getattr(self.conf.keycloak, "debug", False):
             return (
                 f"Keycloak admin permission denied (403) for operation '{operation_name}'. "
-                f"Authentication method: {auth_method} using {auth_id} in realm '{self.conf.keycloak.realm_name}' "
-                f"lacks permission for Admin API endpoint (likely /admin/realms/{self.conf.keycloak.realm_name}/users). "
+                f"Authentication method: {auth_method} using {auth_id} "
+                f"in realm '{self.conf.keycloak.realm_name}' "
+                f"lacks permission for Admin API endpoint "
+                f"(likely /admin/realms/{self.conf.keycloak.realm_name}/users). "
                 f"Ensure the {auth_method.lower()} has appropriate realm-management roles. "
                 f"Full error: {original_error}"
             )
         else:
             return (
-                f"Keycloak permission denied (403) for {auth_method.lower()} {auth_id} in realm '{self.conf.keycloak.realm_name}'. "
+                f"Keycloak permission denied (403) for {auth_method.lower()} {auth_id} "
+                f"in realm '{self.conf.keycloak.realm_name}'. "
                 f"Check realm-management roles. Enable debug=true for details."
             )
 
@@ -273,8 +277,9 @@ class Driver(base.IdentityDriverBase):
                 LOG.error(
                     f"KEYCLOAK_ERROR: Response body: {getattr(e, 'response_body', 'No response body')}"
                 )
+                endpoint_url = f"{self.conf.keycloak.server_url}/admin/realms/{self.conf.keycloak.realm_name}/users"
                 LOG.error(
-                    f"KEYCLOAK_ERROR: Likely endpoint: {self.conf.keycloak.server_url}/admin/realms/{self.conf.keycloak.realm_name}/users"
+                    f"KEYCLOAK_ERROR: Likely endpoint: {endpoint_url}"
                 )
 
             # Handle 403 Forbidden - could be stale permissions in cached token
@@ -286,7 +291,8 @@ class Driver(base.IdentityDriverBase):
                 if not hasattr(self, "_token_refresh_attempted"):
                     if getattr(self.conf.keycloak, "debug", False):
                         LOG.warning(
-                            f"KEYCLOAK_DEBUG: Got 403 for {operation_name}, refreshing token in case permissions changed..."
+                            f"KEYCLOAK_DEBUG: Got 403 for {operation_name}, "
+                            f"refreshing token in case permissions changed..."
                         )
                     self._token_refresh_attempted = True
                     self._refresh_token_and_client()
