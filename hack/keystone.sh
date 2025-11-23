@@ -9,18 +9,31 @@ domain_specific_drivers_enabled = true
 EOF
 
 mkdir -p /etc/keystone/domains
+
 cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak.conf
 [identity]
 driver = keycloak
 
 [keycloak]
-server_url = http://keycloak:8080/
+server_url = http://keycloak:8080
+realm_name = test1
+client_id = keystone-client
+client_secret_key = 12345abcdeFGHIJKLMN67890qrstuvWXYZ
+debug = false
+EOF
+
+cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak-legacy.conf
+[identity]
+driver = keycloak
+
+[keycloak]
+server_url = http://keycloak:8080
 username = admin
 password = admin
-realm_name = master
+realm_name = test2
 user_realm_name = master
 client_id = admin-cli
-verify = true
+debug = false
 EOF
 
 /var/lib/openstack/bin/keystone-manage fernet_setup \
@@ -37,7 +50,7 @@ sudo -u keystone /var/lib/openstack/bin/keystone-manage bootstrap \
   --bootstrap-public-url http://localhost:15000/v3 \
   --bootstrap-internal-url http://localhost:15000/v3
 
-# Create a domain for Keycloak
+# Create a domains for Keycloak
 python <<EOF
 import uuid
 
@@ -50,11 +63,18 @@ from keystone.server import backends
 CONF = keystone.conf.CONF
 PROVIDERS = provider_api.ProviderAPIs
 
-domain = {
-  'id': uuid.uuid4().hex,
-  'name': 'keycloak',
-  'enabled': True,
-}
+domains = [
+  {
+    'id': uuid.uuid4().hex,
+    'name': 'keycloak',
+    'enabled': True,
+  },
+  {
+    'id': uuid.uuid4().hex,
+    'name': 'keycloak-legacy',
+    'enabled': True,
+  }
+]
 
 keystone.conf.configure()
 sql.initialize()
@@ -62,13 +82,14 @@ backends.load_backends()
 
 CONF(project='keystone')
 
-try:
-  PROVIDERS.resource_api.create_domain(
-    domain_id=domain['id'],
-    domain=domain,
-  )
-except keystone.exception.Conflict:
-  pass
+for domain in domains:
+  try:
+    PROVIDERS.resource_api.create_domain(
+      domain_id=domain['id'],
+      domain=domain,
+    )
+  except keystone.exception.Conflict:
+    pass
 EOF
 
 exec uwsgi \
