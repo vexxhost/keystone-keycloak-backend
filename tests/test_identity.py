@@ -5,8 +5,9 @@
 Unit tests for the Keycloak identity backend driver.
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from keystone_keycloak_backend.identity import Driver
 
@@ -225,18 +226,7 @@ class TestAuthenticationMethods:
                 pass  # Ignore exceptions, we just want to check cache keys
 
             # Check that the drivers have different cache keys
-            service_account_attrs = [
-                attr
-                for attr in dir(service_account_driver)
-                if attr.startswith("_keycloak_")
-            ]
-            direct_grant_attrs = [
-                attr
-                for attr in dir(direct_grant_driver)
-                if attr.startswith("_keycloak_")
-            ]
-
-            # They should have different cache keys due to different configurations
+            # (Different configurations should produce different instances)
             # Note: This is a basic check - the actual hash values depend on the implementation
 
 
@@ -319,6 +309,7 @@ class TestDebugMode:
 
         # Test the method
         result = debug_driver._keycloak_with_retry(mock_operation)
+        assert result == "success"
 
         # Verify debug logs were called
         debug_calls = [
@@ -645,6 +636,7 @@ class TestConfigurationValidation:
         """Test that Service Account configuration is properly detected."""
         config = MockConfig(auth_method="service_account")
         driver = Driver(conf=config)
+        assert driver is not None
 
         # Verify Service Account detection
         assert hasattr(config.keycloak, "client_secret_key")
@@ -657,6 +649,7 @@ class TestConfigurationValidation:
         """Test that Direct Grant configuration is properly detected."""
         config = MockConfig(auth_method="direct_grant")
         driver = Driver(conf=config)
+        assert driver is not None
 
         # Verify Direct Grant detection
         assert hasattr(config.keycloak, "username")
@@ -672,11 +665,13 @@ class TestConfigurationValidation:
         # Test debug enabled
         debug_config = MockConfig(auth_method="service_account", debug=True)
         debug_driver = Driver(conf=debug_config)
+        assert debug_driver is not None
         assert debug_config.keycloak.debug is True
 
         # Test debug disabled (default)
         normal_config = MockConfig(auth_method="service_account", debug=False)
         normal_driver = Driver(conf=normal_config)
+        assert normal_driver is not None
         assert normal_config.keycloak.debug is False
 
 

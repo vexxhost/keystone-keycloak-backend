@@ -141,10 +141,11 @@ class Driver(base.IdentityDriverBase):
                 LOG.warning(
                     f"KEYCLOAK_DEBUG: Target Realm: {self.conf.keycloak.realm_name}"
                 )
-                user_realm = getattr(self.conf.keycloak, 'user_realm_name', None) or self.conf.keycloak.realm_name
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Auth Realm: {user_realm}"
+                user_realm = (
+                    getattr(self.conf.keycloak, "user_realm_name", None)
+                    or self.conf.keycloak.realm_name
                 )
+                LOG.warning(f"KEYCLOAK_DEBUG: Auth Realm: {user_realm}")
                 LOG.warning(
                     f"KEYCLOAK_DEBUG: Client ID: {self.conf.keycloak.client_id}"
                 )
@@ -278,9 +279,7 @@ class Driver(base.IdentityDriverBase):
                     f"KEYCLOAK_ERROR: Response body: {getattr(e, 'response_body', 'No response body')}"
                 )
                 endpoint_url = f"{self.conf.keycloak.server_url}/admin/realms/{self.conf.keycloak.realm_name}/users"
-                LOG.error(
-                    f"KEYCLOAK_ERROR: Likely endpoint: {endpoint_url}"
-                )
+                LOG.error(f"KEYCLOAK_ERROR: Likely endpoint: {endpoint_url}")
 
             # Handle 403 Forbidden - could be stale permissions in cached token
             if e.response_code == 403:
