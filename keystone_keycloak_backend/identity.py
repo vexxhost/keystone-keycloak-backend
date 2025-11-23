@@ -4,7 +4,7 @@
 import logging
 import uuid
 
-from keycloak import KeycloakAdmin, KeycloakOpenID
+from keycloak import KeycloakAdmin
 from keycloak import exceptions as keycloak_exceptions
 from keystone import exception
 from keystone.identity.backends import base
@@ -39,54 +39,6 @@ class Driver(base.IdentityDriverBase):
             return f"client '{self.conf.keycloak.client_id}'"
         else:
             return f"user '{getattr(self.conf.keycloak, 'username', 'unknown')}'"
-
-    def _get_fresh_token(self):
-        """Get a fresh access token using Service Account or Direct Grant authentication."""
-        # Use user_realm_name for Direct Grant (where user exists) or fall back to realm_name
-        auth_realm = (
-            getattr(self.conf.keycloak, "user_realm_name", None)
-            or self.conf.keycloak.realm_name
-        )
-
-        openid_client = KeycloakOpenID(
-            server_url=self.conf.keycloak.server_url,
-            realm_name=auth_realm,
-            client_id=self.conf.keycloak.client_id,
-            client_secret_key=getattr(self.conf.keycloak, "client_secret_key", None),
-            verify=self.conf.keycloak.verify,
-        )
-
-        try:
-            if getattr(self.conf.keycloak, "client_secret_key", None):
-                # Use Service Account authentication (OAuth 2.0 Client Credentials Grant)
-                LOG.info(
-                    "Using Service Account authentication with Client Credentials Grant"
-                )
-                LOG.info(f"Realm: {self.conf.keycloak.realm_name}")
-                LOG.info(f"Client ID: {self.conf.keycloak.client_id}")
-                token = openid_client.token(grant_type="client_credentials")
-            else:
-                # Fall back to Direct Grant authentication (username/password)
-                username = getattr(self.conf.keycloak, "username", None)
-                if not username:
-                    raise Exception(
-                        "Neither client_secret_key nor username is configured for authentication"
-                    )
-                LOG.info("Using Direct Grant authentication with username/password")
-                LOG.info(f"Realm: {self.conf.keycloak.realm_name}")
-                LOG.info(f"Client ID: {self.conf.keycloak.client_id}")
-                LOG.info(f"User Realm: {self.conf.keycloak.user_realm_name}")
-                LOG.info(f"Username: {username}")
-                token = openid_client.token(
-                    username=username,
-                    password=self.conf.keycloak.password,
-                    grant_type="password",
-                )
-
-            return token
-        except Exception as e:
-            LOG.error(f"Failed to get access token: {e}")
-            raise exception.Unauthorized("Authentication failed")
 
     def _get_cache_keys(self):
         """Calculate config hash and return cache keys for KeycloakAdmin instance and token."""
@@ -150,26 +102,37 @@ class Driver(base.IdentityDriverBase):
                     f"KEYCLOAK_DEBUG: Client ID: {self.conf.keycloak.client_id}"
                 )
 
-            # Get fresh token and create new KeycloakAdmin
-            fresh_token = self._get_fresh_token()
-            setattr(self, token_key, fresh_token)
-
-            # Always use token-based authentication to avoid double auth
-            # (both Service Account and Direct Grant provide valid tokens)
-            # For Service Account: use full token (no refresh_token typically)
-            # For Direct Grant: remove refresh_token to prevent invalid refresh token errors
-            token_for_admin = fresh_token
-            if not getattr(self.conf.keycloak, "client_secret_key", None):
-                # Direct Grant - remove refresh_token to prevent refresh errors
-                if isinstance(fresh_token, dict) and "refresh_token" in fresh_token:
-                    token_for_admin = fresh_token.copy()
-                    del token_for_admin["refresh_token"]
-            keycloak_instance = KeycloakAdmin(
-                server_url=self.conf.keycloak.server_url,
-                realm_name=self.conf.keycloak.realm_name,
-                verify=self.conf.keycloak.verify,
-                token=token_for_admin,
-            )
+            # Create KeycloakAdmin using username/password or service account directly
+            # This avoids the token-based initialization that can trigger the AttributeError
+            # in python-keycloak 3.x when the internal refresh mechanism is used
+            if getattr(self.conf.keycloak, "client_secret_key", None):
+                # Service Account authentication
+                keycloak_instance = KeycloakAdmin(
+                    server_url=self.conf.keycloak.server_url,
+                    realm_name=self.conf.keycloak.realm_name,
+                    client_id=self.conf.keycloak.client_id,
+                    client_secret_key=self.conf.keycloak.client_secret_key,
+                    verify=self.conf.keycloak.verify,
+                )
+            else:
+                # Direct Grant authentication
+                username = getattr(self.conf.keycloak, "username", None)
+                if not username:
+                    raise Exception(
+                        "Neither client_secret_key nor username is configured for authentication"
+                    )
+                user_realm = (
+                    getattr(self.conf.keycloak, "user_realm_name", None)
+                    or self.conf.keycloak.realm_name
+                )
+                keycloak_instance = KeycloakAdmin(
+                    server_url=self.conf.keycloak.server_url,
+                    realm_name=self.conf.keycloak.realm_name,
+                    username=username,
+                    password=self.conf.keycloak.password,
+                    user_realm_name=user_realm,
+                    verify=self.conf.keycloak.verify,
+                )
 
             setattr(self, cache_key, keycloak_instance)
         else:
@@ -187,26 +150,37 @@ class Driver(base.IdentityDriverBase):
         # Get cache keys
         _, cache_key, token_key = self._get_cache_keys()
 
-        # Get fresh token
-        fresh_token = self._get_fresh_token()
-        setattr(self, token_key, fresh_token)
-
-        # Always use token-based authentication to avoid double auth
-        # (both Service Account and Direct Grant provide valid tokens)
-        # For Service Account: use full token (no refresh_token typically)
-        # For Direct Grant: remove refresh_token to prevent invalid refresh token errors
-        token_for_admin = fresh_token
-        if not getattr(self.conf.keycloak, "client_secret_key", None):
-            # Direct Grant - remove refresh_token to prevent refresh errors
-            if isinstance(fresh_token, dict) and "refresh_token" in fresh_token:
-                token_for_admin = fresh_token.copy()
-                del token_for_admin["refresh_token"]
-        keycloak_instance = KeycloakAdmin(
-            server_url=self.conf.keycloak.server_url,
-            realm_name=self.conf.keycloak.realm_name,
-            verify=self.conf.keycloak.verify,
-            token=token_for_admin,
-        )
+        # Create KeycloakAdmin using username/password or service account directly
+        # This avoids the token-based initialization that can trigger the AttributeError
+        # in python-keycloak 3.x when the internal refresh mechanism is used
+        if getattr(self.conf.keycloak, "client_secret_key", None):
+            # Service Account authentication
+            keycloak_instance = KeycloakAdmin(
+                server_url=self.conf.keycloak.server_url,
+                realm_name=self.conf.keycloak.realm_name,
+                client_id=self.conf.keycloak.client_id,
+                client_secret_key=self.conf.keycloak.client_secret_key,
+                verify=self.conf.keycloak.verify,
+            )
+        else:
+            # Direct Grant authentication
+            username = getattr(self.conf.keycloak, "username", None)
+            if not username:
+                raise Exception(
+                    "Neither client_secret_key nor username is configured for authentication"
+                )
+            user_realm = (
+                getattr(self.conf.keycloak, "user_realm_name", None)
+                or self.conf.keycloak.realm_name
+            )
+            keycloak_instance = KeycloakAdmin(
+                server_url=self.conf.keycloak.server_url,
+                realm_name=self.conf.keycloak.realm_name,
+                username=username,
+                password=self.conf.keycloak.password,
+                user_realm_name=user_realm,
+                verify=self.conf.keycloak.verify,
+            )
 
         setattr(self, cache_key, keycloak_instance)
 
@@ -254,7 +228,7 @@ class Driver(base.IdentityDriverBase):
                 LOG.warning(f"KEYCLOAK_DEBUG: {operation_name} successful")
             return result
         except keycloak_exceptions.KeycloakAuthenticationError:
-            # Token expired (401), get fresh token and recreate client
+            # Token expired (401), recreate client with fresh authentication
             if getattr(self.conf.keycloak, "debug", False):
                 operation_name = getattr(operation, "__name__", str(operation))
                 LOG.warning(

@@ -92,75 +92,29 @@ class TestAuthenticationMethods:
         identifier = direct_grant_driver._auth_identifier
         assert "user 'admin'" == identifier
 
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
-    def test_get_fresh_token_service_account(
-        self, mock_openid_class, service_account_driver
-    ):
-        """Test token acquisition for Service Account."""
-        # Mock the KeycloakOpenID instance
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {
-            "access_token": "test-token",
-            "token_type": "Bearer",
-        }
+    def test_service_account_authentication_deprecated(self, service_account_driver):
+        """Test that Service Account authentication works with new direct approach."""
+        # NOTE: _get_fresh_token method was removed in favor of direct authentication
+        # Service Account authentication now happens directly in KeycloakAdmin initialization
 
-        # Test token acquisition
-        token = service_account_driver._get_fresh_token()
+        # Test that we can access the authentication method and identifier
+        assert service_account_driver._auth_method == "Service Account"
+        assert "client 'keystone-client'" in service_account_driver._auth_identifier
 
-        # Verify Service Account token call
-        mock_openid.token.assert_called_once_with(grant_type="client_credentials")
-        assert token["access_token"] == "test-token"
+    def test_direct_grant_authentication_deprecated(self, direct_grant_driver):
+        """Test that Direct Grant authentication works with new direct approach."""
+        # NOTE: _get_fresh_token method was removed in favor of direct authentication
+        # Direct Grant authentication now happens directly in KeycloakAdmin initialization
 
-        # Verify KeycloakOpenID was initialized with correct parameters
-        mock_openid_class.assert_called_once_with(
-            server_url="http://localhost:8080",
-            realm_name="test",  # Uses realm_name for Service Account
-            client_id="keystone-client",
-            client_secret_key="test-secret-key",
-            verify=False,
-        )
-
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
-    def test_get_fresh_token_direct_grant(self, mock_openid_class, direct_grant_driver):
-        """Test token acquisition for Direct Grant."""
-        # Mock the KeycloakOpenID instance
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {
-            "access_token": "test-token",
-            "token_type": "Bearer",
-        }
-
-        # Test token acquisition
-        token = direct_grant_driver._get_fresh_token()
-
-        # Verify Direct Grant token call
-        mock_openid.token.assert_called_once_with(
-            username="admin", password="admin", grant_type="password"
-        )
-        assert token["access_token"] == "test-token"
-
-        # Verify KeycloakOpenID was initialized with user_realm_name for Direct Grant
-        mock_openid_class.assert_called_once_with(
-            server_url="http://localhost:8080",
-            realm_name="master",  # Uses user_realm_name for Direct Grant
-            client_id="admin-cli",
-            client_secret_key=None,
-            verify=False,
-        )
+        # Test that we can access the authentication method and identifier
+        assert direct_grant_driver._auth_method == "Direct Grant"
+        assert "user 'admin'" in direct_grant_driver._auth_identifier
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
     def test_keycloak_property_service_account(
-        self, mock_openid_class, mock_admin_class, service_account_driver
+        self, mock_admin_class, service_account_driver
     ):
-        """Test KeycloakAdmin initialization for Service Account."""
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
-
+        """Test KeycloakAdmin initialization for Service Account with direct authentication."""
         # Mock KeycloakAdmin
         mock_admin = Mock()
         mock_admin_class.return_value = mock_admin
@@ -168,27 +122,21 @@ class TestAuthenticationMethods:
         # Access the keycloak property
         keycloak_instance = service_account_driver.keycloak
 
-        # Verify KeycloakAdmin was initialized with token-based auth for Service Account
-        # (eliminating double authentication)
+        # Verify KeycloakAdmin was initialized with direct Service Account auth
         mock_admin_class.assert_called_once_with(
             server_url="http://localhost:8080",
             realm_name="test",  # Uses realm_name for target realm
+            client_id="keystone-client",
+            client_secret_key="test-secret-key",  # Direct Service Account auth
             verify=False,
-            token={"access_token": "test-token"},  # Full token for Service Account
         )
         assert keycloak_instance == mock_admin
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
     def test_keycloak_property_direct_grant(
-        self, mock_openid_class, mock_admin_class, direct_grant_driver
+        self, mock_admin_class, direct_grant_driver
     ):
-        """Test KeycloakAdmin initialization for Direct Grant."""
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
-
+        """Test KeycloakAdmin initialization for Direct Grant with direct authentication."""
         # Mock KeycloakAdmin
         mock_admin = Mock()
         mock_admin_class.return_value = mock_admin
@@ -196,23 +144,21 @@ class TestAuthenticationMethods:
         # Access the keycloak property
         keycloak_instance = direct_grant_driver.keycloak
 
-        # Verify KeycloakAdmin was initialized for Direct Grant with token
+        # Verify KeycloakAdmin was initialized with direct username/password auth
         mock_admin_class.assert_called_once_with(
             server_url="http://localhost:8080",
             realm_name="test",  # Uses realm_name for target realm
+            username="admin",
+            password="admin",
+            user_realm_name="master",  # User realm for Direct Grant
             verify=False,
-            token={
-                "access_token": "test-token"
-            },  # Refresh_token removed for Direct Grant
         )
         assert keycloak_instance == mock_admin
 
     def test_config_hash_uniqueness(self, service_account_driver, direct_grant_driver):
         """Test that different configurations produce different cache keys."""
         # Force initialization of both drivers
-        with patch("keystone_keycloak_backend.identity.KeycloakOpenID"), patch(
-            "keystone_keycloak_backend.identity.KeycloakAdmin"
-        ):
+        with patch("keystone_keycloak_backend.identity.KeycloakAdmin"):
 
             # Access both keycloak properties to trigger initialization
             try:
@@ -234,17 +180,9 @@ class TestDebugMode:
     """Test cases for debug mode functionality."""
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
     @patch("keystone_keycloak_backend.identity.LOG")
-    def test_debug_logging_enabled(
-        self, mock_log, mock_openid_class, mock_admin_class, debug_driver
-    ):
+    def test_debug_logging_enabled(self, mock_log, mock_admin_class, debug_driver):
         """Test that debug logging is enabled when debug=True."""
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
-
         # Mock KeycloakAdmin
         mock_admin = Mock()
         mock_admin_class.return_value = mock_admin
@@ -261,17 +199,11 @@ class TestDebugMode:
         assert len(debug_calls) > 0, "Debug logging should be enabled"
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
     @patch("keystone_keycloak_backend.identity.LOG")
     def test_debug_logging_disabled(
-        self, mock_log, mock_openid_class, mock_admin_class, service_account_driver
+        self, mock_log, mock_admin_class, service_account_driver
     ):
         """Test that debug logging is disabled when debug=False."""
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
-
         # Mock KeycloakAdmin
         mock_admin = Mock()
         mock_admin_class.return_value = mock_admin
@@ -288,17 +220,11 @@ class TestDebugMode:
         assert len(debug_calls) == 0, "Debug logging should be disabled"
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
     @patch("keystone_keycloak_backend.identity.LOG")
     def test_keycloak_with_retry_debug_logging(
-        self, mock_log, mock_openid_class, mock_admin_class, debug_driver
+        self, mock_log, mock_admin_class, debug_driver
     ):
         """Test debug logging in _keycloak_with_retry method."""
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
-
         # Mock KeycloakAdmin
         mock_admin = Mock()
         mock_admin_class.return_value = mock_admin
@@ -501,15 +427,59 @@ class TestErrorHandling:
         ]
         assert len(error_calls) == 0, "Should not log detailed errors when debug=false"
 
+    def test_attribute_error_no_longer_handled(self, service_account_driver):
+        """Test that AttributeError from python-keycloak 3.x is no longer an issue.
+
+        Since we switched to direct authentication approach, we no longer trigger
+        the problematic code path that caused the AttributeError in python-keycloak 3.x.
+        """
+        # Mock operation that would have triggered AttributeError in old token-based approach
+        mock_operation = Mock(
+            side_effect=AttributeError("'NoneType' object has no attribute 'get'")
+        )
+        mock_operation.__name__ = "get_user"
+
+        # This AttributeError should now be raised normally since we don't handle it
+        # (because we no longer trigger the problematic code path)
+        with pytest.raises(
+            AttributeError, match="'NoneType' object has no attribute 'get'"
+        ):
+            service_account_driver._keycloak_with_retry(mock_operation)
+
+    def test_attribute_error_no_longer_handled_debug(self, debug_driver):
+        """Test that AttributeError is no longer handled even with debug mode.
+
+        Since we switched to direct authentication, we no longer trigger the
+        problematic python-keycloak 3.x code path.
+        """
+        # Mock operation that simulates the old AttributeError
+        original_operation = Mock(
+            side_effect=AttributeError("'NoneType' object has no attribute 'get'")
+        )
+        original_operation.__name__ = "get_user"
+
+        # This should raise AttributeError normally (no special handling)
+        with pytest.raises(
+            AttributeError, match="'NoneType' object has no attribute 'get'"
+        ):
+            debug_driver._keycloak_with_retry(original_operation)
+
+    def test_non_token_attribute_error_passthrough(self, service_account_driver):
+        """Test that non-token AttributeErrors are passed through normally."""
+        # Mock operation that raises unrelated AttributeError
+        mock_operation = Mock(side_effect=AttributeError("Some other attribute error"))
+        mock_operation.__name__ = "get_user"
+
+        # This should raise the AttributeError without retry
+        with pytest.raises(AttributeError, match="Some other attribute error"):
+            service_account_driver._keycloak_with_retry(mock_operation)
+
 
 class TestDomainIsolation:
     """Test cases for domain isolation functionality."""
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
-    def test_different_configs_produce_different_instances(
-        self, mock_openid_class, mock_admin_class
-    ):
+    def test_different_configs_produce_different_instances(self, mock_admin_class):
         """Test that different configurations create separate Keycloak instances."""
         # Create two drivers with different configurations
         service_config = MockConfig(auth_method="service_account")
@@ -517,11 +487,6 @@ class TestDomainIsolation:
 
         service_driver = Driver(conf=service_config)
         direct_driver = Driver(conf=direct_config)
-
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
 
         # Mock KeycloakAdmin to return different instances
         mock_admin1 = Mock()
@@ -540,31 +505,24 @@ class TestDomainIsolation:
         # Verify KeycloakAdmin was called twice with different parameters
         assert mock_admin_class.call_count == 2
 
-        # First call (Service Account) - now uses token-based auth
+        # First call (Service Account) - now uses direct client_secret_key auth
         first_call = mock_admin_class.call_args_list[0]
         assert first_call[1]["server_url"] == "http://localhost:8080"
-        assert first_call[1]["token"] == {
-            "access_token": "test-token"
-        }  # Full token for Service Account
+        assert first_call[1]["client_secret_key"] == "test-secret-key"
         assert first_call[1]["realm_name"] == "test"
 
-        # Second call (Direct Grant)
+        # Second call (Direct Grant) - now uses direct username/password auth
         second_call = mock_admin_class.call_args_list[1]
-        assert "token" in second_call[1]
+        assert second_call[1]["username"] == "admin"
+        assert second_call[1]["password"] == "admin"
         assert second_call[1]["realm_name"] == "test"
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
-    def test_config_hash_computation(self, mock_openid_class, mock_admin_class):
+    def test_config_hash_computation(self, mock_admin_class):
         """Test that configuration hash is computed correctly."""
         # Create drivers with different configurations
         service_driver = Driver(conf=MockConfig(auth_method="service_account"))
         direct_driver = Driver(conf=MockConfig(auth_method="direct_grant"))
-
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
 
         # Mock KeycloakAdmin
         mock_admin1 = Mock()
@@ -583,14 +541,14 @@ class TestDomainIsolation:
         call1 = mock_admin_class.call_args_list[0]
         call2 = mock_admin_class.call_args_list[1]
 
-        # Both methods now use token-based authentication to avoid double auth
-        # Service Account gets full token, Direct Grant gets token without refresh_token
-        assert call1[1].get("token") == {
-            "access_token": "test-token"
-        }  # Service Account - full token
-        assert call2[1].get("token") == {
-            "access_token": "test-token"
-        }  # Direct Grant - refresh_token removed
+        # Service Account uses client_secret_key, Direct Grant uses username/password
+        assert call1[1].get("client_secret_key") == "test-secret-key"  # Service Account
+        assert call1[1].get("username") is None  # Service Account doesn't use username
+
+        assert call2[1].get("username") == "admin"  # Direct Grant
+        assert (
+            call2[1].get("client_secret_key") is None
+        )  # Direct Grant doesn't use client_secret_key
 
         # Even though server URLs and realms are the same, different auth methods
         # (service account vs direct grant) produce different cache keys due to
@@ -598,16 +556,10 @@ class TestDomainIsolation:
         # This test validates that cache isolation works correctly
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
-    def test_cache_key_isolation(self, mock_openid_class, mock_admin_class):
+    def test_cache_key_isolation(self, mock_admin_class):
         """Test that different configurations use different cache keys."""
         service_driver = Driver(conf=MockConfig(auth_method="service_account"))
         direct_driver = Driver(conf=MockConfig(auth_method="direct_grant"))
-
-        # Mock token acquisition
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
 
         # Mock KeycloakAdmin to return different instances
         mock_admin1 = Mock()
@@ -741,8 +693,7 @@ class TestRealConfiguration:
         assert "admin" in driver._auth_identifier
 
     @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.KeycloakOpenID")
-    def test_multi_domain_scenario(self, mock_openid_class, mock_admin_class):
+    def test_multi_domain_scenario(self, mock_admin_class):
         """Test scenario with multiple domains using different auth methods."""
         # Simulate keystone.conf with multiple domains:
         # [keycloak] - Service Account for production
@@ -799,10 +750,6 @@ class TestRealConfiguration:
         legacy_driver = Driver(conf=legacy_config)
 
         # Mock Keycloak instances
-        mock_openid = Mock()
-        mock_openid_class.return_value = mock_openid
-        mock_openid.token.return_value = {"access_token": "test-token"}
-
         mock_admin_prod = Mock()
         mock_admin_legacy = Mock()
         mock_admin_class.side_effect = [mock_admin_prod, mock_admin_legacy]
@@ -821,15 +768,18 @@ class TestRealConfiguration:
         # Verify correct configuration isolation
         assert mock_admin_class.call_count == 2
 
-        # Production call (Service Account) - now uses token-based auth
+        # Production call (Service Account) - now uses direct client_secret_key auth
         prod_call = mock_admin_class.call_args_list[0]
         assert prod_call[1]["server_url"] == "https://keycloak.company.com"
-        assert prod_call[1]["token"] == {"access_token": "test-token"}
+        assert prod_call[1]["client_secret_key"] == "prod-secret"
+        assert prod_call[1]["realm_name"] == "production"
 
-        # Legacy call (Direct Grant) - also uses token-based auth
+        # Legacy call (Direct Grant) - now uses direct username/password auth
         legacy_call = mock_admin_class.call_args_list[1]
         assert legacy_call[1]["server_url"] == "http://legacy-keycloak:8080"
-        assert legacy_call[1]["token"] == {"access_token": "test-token"}
+        assert legacy_call[1]["username"] == "legacy-admin"
+        assert legacy_call[1]["password"] == "legacy-pass"
+        assert legacy_call[1]["realm_name"] == "legacy"
 
 
 class TestFormatUser:

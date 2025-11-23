@@ -19,7 +19,7 @@ server_url = http://keycloak:8080
 realm_name = test1
 client_id = keystone-client
 client_secret_key = 12345abcdeFGHIJKLMN67890qrstuvWXYZ
-debug = false
+debug = true
 EOF
 
 cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak-legacy.conf
@@ -33,7 +33,7 @@ password = admin
 realm_name = test2
 user_realm_name = master
 client_id = admin-cli
-debug = false
+debug = true
 EOF
 
 /var/lib/openstack/bin/keystone-manage fernet_setup \
