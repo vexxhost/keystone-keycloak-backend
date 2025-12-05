@@ -6,6 +6,12 @@ services:
       MYSQL_DATABASE: keystone
       MYSQL_USER: keystone
       MYSQL_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.5-0
@@ -23,5 +29,7 @@ services:
     ports:
       - 15000:5000
     depends_on:
-      - database
-      - keycloak
+      database:
+        condition: service_healthy
+      keycloak:
+        condition: service_started

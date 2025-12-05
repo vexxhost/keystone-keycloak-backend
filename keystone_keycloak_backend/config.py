@@ -15,12 +15,19 @@ keycloak_opts = [
     ),
     cfg.StrOpt(
         "username",
-        help="Keycloak admin username",
+        help="Keycloak admin username (for Direct Grant authentication)",
     ),
     cfg.StrOpt(
         "password",
         secret=True,
-        help="Keycloak admin password",
+        help="Keycloak admin password (for Direct Grant authentication)",
+    ),
+    cfg.StrOpt(
+        "client_secret_key",
+        secret=True,
+        help="Client secret for Service Account authentication. "
+        "When provided, Service Account authentication will be used "
+        "instead of Direct Grant.",
     ),
     cfg.StrOpt(
         "realm_name",
@@ -28,7 +35,9 @@ keycloak_opts = [
     ),
     cfg.StrOpt(
         "user_realm_name",
-        help="Keycloak user realm name",
+        help="Keycloak user realm name (for Direct Grant authentication only). "
+        "Specifies the realm where admin user credentials exist. "
+        "If not specified, defaults to realm_name.",
     ),
     cfg.StrOpt(
         "client_id",
