@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.2.0...v0.3.0) (2025-12-05)
+
+
+### Features
+
+* expose user attributes for email and description ([085a1d0](https://github.com/vexxhost/keystone-keycloak-backend/commit/085a1d096216eb3214f9244eae9ee04d22b41c6e))
+
 ## [0.2.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.8...v0.2.0) (2024-10-30)
 
 
