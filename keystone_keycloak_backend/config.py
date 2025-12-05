@@ -49,11 +49,6 @@ keycloak_opts = [
         default=True,
         help="Verify SSL certificate",
     ),
-    cfg.BoolOpt(
-        "debug",
-        default=False,
-        help="Enable detailed debug logging for Keycloak operations",
-    ),
 ]
 
 

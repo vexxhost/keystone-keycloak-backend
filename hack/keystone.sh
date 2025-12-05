@@ -1,6 +1,9 @@
 #!/bin/bash -xe
 
 cat << EOF | sudo tee /etc/keystone/keystone.conf
+[DEFAULT]
+debug = true
+
 [database]
 connection = mysql+pymysql://keystone:password@database/keystone
 
@@ -19,7 +22,6 @@ server_url = http://keycloak:8080
 realm_name = test1
 client_id = keystone-client
 client_secret_key = 12345abcdeFGHIJKLMN67890qrstuvWXYZ
-debug = true
 EOF
 
 cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak-legacy.conf
@@ -33,7 +35,6 @@ password = admin
 realm_name = test2
 user_realm_name = master
 client_id = admin-cli
-debug = true
 EOF
 
 /var/lib/openstack/bin/keystone-manage fernet_setup \

@@ -8,6 +8,7 @@ from keycloak import KeycloakAdmin
 from keycloak import exceptions as keycloak_exceptions
 from keystone import exception
 from keystone.identity.backends import base
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt
 
 from keystone_keycloak_backend import config
 
@@ -40,122 +41,48 @@ class Driver(base.IdentityDriverBase):
         else:
             return f"user '{getattr(self.conf.keycloak, 'username', 'unknown')}'"
 
-    def _get_cache_keys(self):
-        """Calculate config hash and return cache keys for KeycloakAdmin instance and token."""
-        config_hash = hash(
-            (
-                self.conf.keycloak.server_url,
-                self.conf.keycloak.realm_name,
-                getattr(self.conf.keycloak, "user_realm_name", ""),
-                self.conf.keycloak.client_id,
-                getattr(self.conf.keycloak, "client_secret_key", ""),
-                getattr(self.conf.keycloak, "username", ""),
-                getattr(self.conf.keycloak, "password", ""),
-            )
-        )
-        cache_key = f"_keycloak_{config_hash}"
-        token_key = f"_token_{config_hash}"
-        return config_hash, cache_key, token_key
-
     @property
     def keycloak(self):
-        # Create a unique cache key based on the domain configuration
-        # This ensures each domain gets its own KeycloakAdmin instance
-        config_hash, cache_key, token_key = self._get_cache_keys()
+        """Initialized KeycloakAdmin instance.
+        Each Driver instance is tied to a specific domain configuration.
+        """
+        if not hasattr(self, "_keycloak"):
+            client_secret_configured = bool(
+                getattr(self.conf.keycloak, "client_secret_key", None)
+            )
+            username_configured = bool(getattr(self.conf.keycloak, "username", None))
 
-        if not hasattr(self, cache_key):
-            # Log configuration for debugging if debug mode is enabled
-            if getattr(self.conf.keycloak, "debug", False):
-                client_secret_configured = bool(
-                    getattr(self.conf.keycloak, "client_secret_key", None)
-                )
-                username_configured = bool(
-                    getattr(self.conf.keycloak, "username", None)
-                )
+            LOG.debug("Initializing Keycloak client")
+            LOG.debug("Driver instance ID: %s", id(self))
+            LOG.debug("Client Secret configured: %s", client_secret_configured)
+            LOG.debug("Username configured: %s", username_configured)
+            LOG.debug("Server URL: %s", self.conf.keycloak.server_url)
+            LOG.debug("Realm: %s", self.conf.keycloak.realm_name)
+            LOG.debug("Target Realm: %s", self.conf.keycloak.realm_name)
+            user_realm = (
+                getattr(self.conf.keycloak, "user_realm_name", None)
+                or self.conf.keycloak.realm_name
+            )
+            LOG.debug("Auth Realm: %s", user_realm)
+            LOG.debug("Client ID: %s", self.conf.keycloak.client_id)
 
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Initializing Keycloak client for config hash: {config_hash}"
-                )
-                LOG.warning(f"KEYCLOAK_DEBUG: Driver instance ID: {id(self)}")
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Cache key exists: {hasattr(self, cache_key)}"
-                )
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Client Secret configured: {client_secret_configured}"
-                )
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Username configured: {username_configured}"
-                )
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Server URL: {self.conf.keycloak.server_url}"
-                )
-                LOG.warning(f"KEYCLOAK_DEBUG: Realm: {self.conf.keycloak.realm_name}")
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Target Realm: {self.conf.keycloak.realm_name}"
-                )
-                user_realm = (
-                    getattr(self.conf.keycloak, "user_realm_name", None)
-                    or self.conf.keycloak.realm_name
-                )
-                LOG.warning(f"KEYCLOAK_DEBUG: Auth Realm: {user_realm}")
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Client ID: {self.conf.keycloak.client_id}"
-                )
-
-            # Create KeycloakAdmin using username/password or service account directly
-            # This avoids the token-based initialization that can trigger the AttributeError
-            # in python-keycloak 3.x when the internal refresh mechanism is used
-            if getattr(self.conf.keycloak, "client_secret_key", None):
-                # Service Account authentication
-                keycloak_instance = KeycloakAdmin(
-                    server_url=self.conf.keycloak.server_url,
-                    realm_name=self.conf.keycloak.realm_name,
-                    client_id=self.conf.keycloak.client_id,
-                    client_secret_key=self.conf.keycloak.client_secret_key,
-                    verify=self.conf.keycloak.verify,
-                )
-            else:
-                # Direct Grant authentication
-                username = getattr(self.conf.keycloak, "username", None)
-                if not username:
-                    raise Exception(
-                        "Neither client_secret_key nor username is configured for authentication"
-                    )
-                user_realm = (
-                    getattr(self.conf.keycloak, "user_realm_name", None)
-                    or self.conf.keycloak.realm_name
-                )
-                keycloak_instance = KeycloakAdmin(
-                    server_url=self.conf.keycloak.server_url,
-                    realm_name=self.conf.keycloak.realm_name,
-                    username=username,
-                    password=self.conf.keycloak.password,
-                    user_realm_name=user_realm,
-                    verify=self.conf.keycloak.verify,
-                )
-
-            setattr(self, cache_key, keycloak_instance)
+            self._keycloak = self._create_keycloak_admin()
         else:
-            # Using cached instance - log this for debugging
-            if getattr(self.conf.keycloak, "debug", False):
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Using cached Keycloak client for config hash: {config_hash}"
-                )
-                LOG.warning(f"KEYCLOAK_DEBUG: Driver instance ID: {id(self)}")
+            LOG.debug("Using cached Keycloak client")
+            LOG.debug("Driver instance ID: %s", id(self))
 
-        return getattr(self, cache_key)
+        return self._keycloak
 
-    def _refresh_token_and_client(self):
-        """Helper method to refresh token and recreate KeycloakAdmin client."""
-        # Get cache keys
-        _, cache_key, token_key = self._get_cache_keys()
+    def _create_keycloak_admin(self):
+        """Create a new KeycloakAdmin instance based on configuration.
 
-        # Create KeycloakAdmin using username/password or service account directly
-        # This avoids the token-based initialization that can trigger the AttributeError
-        # in python-keycloak 3.x when the internal refresh mechanism is used
+        This method handles both Service Account and Direct Grant authentication
+        by creating KeycloakAdmin instances directly to avoid token-based
+        initialization issues in python-keycloak 3.x.
+        """
         if getattr(self.conf.keycloak, "client_secret_key", None):
             # Service Account authentication
-            keycloak_instance = KeycloakAdmin(
+            return KeycloakAdmin(
                 server_url=self.conf.keycloak.server_url,
                 realm_name=self.conf.keycloak.realm_name,
                 client_id=self.conf.keycloak.client_id,
@@ -173,7 +100,7 @@ class Driver(base.IdentityDriverBase):
                 getattr(self.conf.keycloak, "user_realm_name", None)
                 or self.conf.keycloak.realm_name
             )
-            keycloak_instance = KeycloakAdmin(
+            return KeycloakAdmin(
                 server_url=self.conf.keycloak.server_url,
                 realm_name=self.conf.keycloak.realm_name,
                 username=username,
@@ -182,122 +109,89 @@ class Driver(base.IdentityDriverBase):
                 verify=self.conf.keycloak.verify,
             )
 
-        setattr(self, cache_key, keycloak_instance)
+    def _refresh_token_and_client(self):
+        """Refresh token and recreate KeycloakAdmin client."""
+        self._keycloak = self._create_keycloak_admin()
 
     def _generate_403_error_message(
         self, operation_name, auth_method, auth_id, original_error
     ):
-        """Generate 403 error message based on debug flag."""
-        if getattr(self.conf.keycloak, "debug", False):
-            return (
-                f"Keycloak admin permission denied (403) for operation '{operation_name}'. "
-                f"Authentication method: {auth_method} using {auth_id} "
-                f"in realm '{self.conf.keycloak.realm_name}' "
-                f"lacks permission for Admin API endpoint "
-                f"(likely /admin/realms/{self.conf.keycloak.realm_name}/users). "
-                f"Ensure the {auth_method.lower()} has appropriate realm-management roles. "
-                f"Full error: {original_error}"
-            )
-        else:
-            return (
-                f"Keycloak permission denied (403) for {auth_method.lower()} {auth_id} "
-                f"in realm '{self.conf.keycloak.realm_name}'. "
-                f"Check realm-management roles. Enable debug=true for details."
-            )
+        """Generate 403 error message with detailed logging."""
+        return (
+            f"Keycloak permission denied (403) for operation {operation_name} using {auth_method.lower()} {auth_id} "
+            f"in realm '{self.conf.keycloak.realm_name}'. "
+            f"Admin API endpoint (likely /admin/realms/{self.conf.keycloak.realm_name}/users) requires "
+            f"realm-management roles. Full error: {original_error}"
+        )
+
+    def _keycloak_call_with_auth_retry(self, operation, *args, **kwargs):
+        """Execute Keycloak operation with automatic retry on authentication errors."""
+        for attempt in Retrying(
+            retry=retry_if_exception_type(
+                keycloak_exceptions.KeycloakAuthenticationError
+            ),
+            stop=stop_after_attempt(2),
+        ):
+            with attempt:
+                if attempt.retry_state.attempt_number > 1:
+                    self._refresh_token_and_client()
+                    operation_name = getattr(operation, "__name__", str(operation))
+                    operation = getattr(self.keycloak, operation_name)
+                return operation(*args, **kwargs)
 
     def _keycloak_with_retry(self, operation, *args, **kwargs):
-        """Execute a Keycloak operation with automatic token refresh on 401 errors."""
-        # Log the operation being called for debugging if debug mode is enabled
-        if getattr(self.conf.keycloak, "debug", False):
-            operation_name = getattr(operation, "__name__", str(operation))
-            auth_method = self._auth_method
-            auth_id = self._auth_identifier
-            LOG.warning(f"KEYCLOAK_DEBUG: Calling {operation_name}")
-            LOG.warning(f"KEYCLOAK_DEBUG: Auth Method: {auth_method} using {auth_id}")
-            LOG.warning(f"KEYCLOAK_DEBUG: Server URL: {self.conf.keycloak.server_url}")
-            LOG.warning(
-                f"KEYCLOAK_DEBUG: User Realm: {getattr(self.conf.keycloak, 'user_realm_name', 'N/A')}"
-            )
-            LOG.warning(f"KEYCLOAK_DEBUG: Realm: {self.conf.keycloak.realm_name}")
-            LOG.warning(f"KEYCLOAK_DEBUG: Client ID: {self.conf.keycloak.client_id}")
+        """Execute a Keycloak operation with retry logic."""
+        operation_name = getattr(operation, "__name__", str(operation))
+        auth_method = self._auth_method
+        auth_id = self._auth_identifier
+        LOG.debug("Calling %s", operation_name)
+        LOG.debug("Auth Method: %s using %s", auth_method, auth_id)
+        LOG.debug("Server URL: %s", self.conf.keycloak.server_url)
+        LOG.debug(
+            "User Realm: %s", getattr(self.conf.keycloak, "user_realm_name", "N/A")
+        )
+        LOG.debug("Realm: %s", self.conf.keycloak.realm_name)
+        LOG.debug("Client ID: %s", self.conf.keycloak.client_id)
 
         try:
-            result = operation(*args, **kwargs)
-            if getattr(self.conf.keycloak, "debug", False):
-                operation_name = getattr(operation, "__name__", str(operation))
-                LOG.warning(f"KEYCLOAK_DEBUG: {operation_name} successful")
+            result = self._keycloak_call_with_auth_retry(operation, *args, **kwargs)
+            LOG.debug("%s successful", operation_name)
             return result
-        except keycloak_exceptions.KeycloakAuthenticationError:
-            # Token expired (401), recreate client with fresh authentication
-            if getattr(self.conf.keycloak, "debug", False):
-                operation_name = getattr(operation, "__name__", str(operation))
-                LOG.warning(
-                    f"KEYCLOAK_DEBUG: Token expired during {operation_name}, refreshing..."
-                )
-            self._refresh_token_and_client()
-            # Retry the operation with fresh token - get the method from the fresh instance
-            operation_name = getattr(operation, "__name__", str(operation))
-            fresh_operation = getattr(self.keycloak, operation_name)
-            return fresh_operation(*args, **kwargs)
         except keycloak_exceptions.KeycloakGetError as e:
-            # Get operation name for error logging
-            operation_name = getattr(operation, "__name__", str(operation))
+            LOG.debug("%s failed: %s", operation_name, e)
+            LOG.debug("Response code: %s", getattr(e, "response_code", "unknown"))
+            LOG.debug(
+                "Response body: %s", getattr(e, "response_body", "No response body")
+            )
+            endpoint_url = f"{self.conf.keycloak.server_url}/admin/realms/{self.conf.keycloak.realm_name}/users"
+            LOG.debug("Likely endpoint: %s", endpoint_url)
 
-            # Log detailed error information only if debug mode is enabled
-            if getattr(self.conf.keycloak, "debug", False):
-                LOG.error(f"KEYCLOAK_ERROR: {operation_name} failed: {e}")
-                LOG.error(
-                    f"KEYCLOAK_ERROR: Response code: {getattr(e, 'response_code', 'unknown')}"
-                )
-                LOG.error(
-                    f"KEYCLOAK_ERROR: Response body: {getattr(e, 'response_body', 'No response body')}"
-                )
-                endpoint_url = f"{self.conf.keycloak.server_url}/admin/realms/{self.conf.keycloak.realm_name}/users"
-                LOG.error(f"KEYCLOAK_ERROR: Likely endpoint: {endpoint_url}")
-
-            # Handle 403 Forbidden - could be stale permissions in cached token
+            # Handle 403 Forbidden - try one refresh in case permissions changed
             if e.response_code == 403:
-                auth_method = self._auth_method
-                auth_id = self._auth_identifier
-
-                # Try refreshing token once in case permissions were recently changed
-                if not hasattr(self, "_token_refresh_attempted"):
-                    if getattr(self.conf.keycloak, "debug", False):
-                        LOG.warning(
-                            f"KEYCLOAK_DEBUG: Got 403 for {operation_name}, "
-                            f"refreshing token in case permissions changed..."
-                        )
-                    self._token_refresh_attempted = True
+                LOG.debug(
+                    "Got 403 for %s, trying token refresh in case permissions changed...",
+                    operation_name,
+                )
+                try:
                     self._refresh_token_and_client()
-                    # Retry the operation with fresh token - get the method from the fresh instance
-                    try:
-                        operation_name = getattr(operation, "__name__", str(operation))
-                        fresh_operation = getattr(self.keycloak, operation_name)
-                        result = fresh_operation(*args, **kwargs)
-                        # Reset the flag on successful retry
-                        delattr(self, "_token_refresh_attempted")
-                        return result
-                    except keycloak_exceptions.KeycloakGetError as retry_e:
-                        if retry_e.response_code == 403:
-                            # Still 403 after refresh, it's a real permission issue
-                            delattr(self, "_token_refresh_attempted")
-                            raise Exception(
-                                self._generate_403_error_message(
-                                    operation_name, auth_method, auth_id, retry_e
-                                )
-                            )
-                        else:
-                            # Different error after retry, re-raise it
-                            delattr(self, "_token_refresh_attempted")
-                            raise
-                else:
-                    # Already attempted refresh, it's a real permission issue
-                    delattr(self, "_token_refresh_attempted")
-                    raise Exception(
-                        self._generate_403_error_message(
-                            operation_name, auth_method, auth_id, e
-                        )
+                    # Retry with fresh token
+                    fresh_operation = getattr(self.keycloak, operation_name)
+                    result = self._keycloak_call_with_auth_retry(
+                        fresh_operation, *args, **kwargs
                     )
+                    LOG.debug("%s successful after token refresh", operation_name)
+                    return result
+                except keycloak_exceptions.KeycloakGetError as retry_e:
+                    if retry_e.response_code == 403:
+                        # Still 403 after refresh, it's a real permission issue
+                        raise Exception(
+                            self._generate_403_error_message(
+                                operation_name, auth_method, auth_id, retry_e
+                            )
+                        )
+                    else:
+                        # Different error after retry, re-raise it
+                        raise
             # Re-raise other KeycloakGetError exceptions as-is
             raise
 
@@ -377,7 +271,7 @@ class Driver(base.IdentityDriverBase):
         group_id = uuid.UUID(group_id)
 
         try:
-            users = self.keycloak.get_group_members(group_id)
+            users = self._keycloak_with_retry(self.keycloak.get_group_members, group_id)
         except keycloak_exceptions.KeycloakGetError as e:
             if e.response_code == 404:
                 raise exception.GroupNotFound(group_id=group_id)
@@ -427,8 +321,9 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def get_user_by_name(self, user_name, domain_id):
-        users = self.keycloak.get_users(
-            query={"username": user_name, "max": 1, "exact": True}
+        users = self._keycloak_with_retry(
+            self.keycloak.get_users,
+            query={"username": user_name, "max": 1, "exact": True},
         )
         if len(users) == 0 or users[0]["username"] != user_name:
             raise exception.UserNotFound(user_id=user_name)

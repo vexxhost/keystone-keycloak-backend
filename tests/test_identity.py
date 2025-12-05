@@ -15,8 +15,8 @@ from keystone_keycloak_backend.identity import Driver
 class MockConfig:
     """Mock configuration object for testing."""
 
-    def __init__(self, auth_method="direct_grant", debug=False):
-        self.keycloak = MockKeycloakConfig(auth_method, debug)
+    def __init__(self, auth_method="direct_grant"):
+        self.keycloak = MockKeycloakConfig(auth_method)
 
     def register_group(self, group):
         pass
@@ -28,12 +28,11 @@ class MockConfig:
 class MockKeycloakConfig:
     """Mock Keycloak configuration section."""
 
-    def __init__(self, auth_method="direct_grant", debug=False):
+    def __init__(self, auth_method="direct_grant"):
         self.server_url = "http://localhost:8080"
         self.realm_name = "test"
         self.client_id = "admin-cli"
         self.verify = False
-        self.debug = debug
 
         if auth_method == "service_account":
             # Service Account configuration
@@ -59,13 +58,6 @@ def direct_grant_driver():
 def service_account_driver():
     """Fixture to create a Driver instance with Service Account authentication."""
     mock_config = MockConfig(auth_method="service_account")
-    return Driver(conf=mock_config)
-
-
-@pytest.fixture
-def debug_driver():
-    """Fixture to create a Driver instance with debug enabled."""
-    mock_config = MockConfig(auth_method="service_account", debug=True)
     return Driver(conf=mock_config)
 
 
@@ -176,88 +168,12 @@ class TestAuthenticationMethods:
             # Note: This is a basic check - the actual hash values depend on the implementation
 
 
-class TestDebugMode:
-    """Test cases for debug mode functionality."""
-
-    @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.LOG")
-    def test_debug_logging_enabled(self, mock_log, mock_admin_class, debug_driver):
-        """Test that debug logging is enabled when debug=True."""
-        # Mock KeycloakAdmin
-        mock_admin = Mock()
-        mock_admin_class.return_value = mock_admin
-
-        # Access the keycloak property to trigger debug logging
-        _ = debug_driver.keycloak
-
-        # Verify debug logs were called
-        debug_calls = [
-            call
-            for call in mock_log.warning.call_args_list
-            if "KEYCLOAK_DEBUG:" in str(call)
-        ]
-        assert len(debug_calls) > 0, "Debug logging should be enabled"
-
-    @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.LOG")
-    def test_debug_logging_disabled(
-        self, mock_log, mock_admin_class, service_account_driver
-    ):
-        """Test that debug logging is disabled when debug=False."""
-        # Mock KeycloakAdmin
-        mock_admin = Mock()
-        mock_admin_class.return_value = mock_admin
-
-        # Access the keycloak property
-        _ = service_account_driver.keycloak
-
-        # Verify debug logs were NOT called
-        debug_calls = [
-            call
-            for call in mock_log.warning.call_args_list
-            if "KEYCLOAK_DEBUG:" in str(call)
-        ]
-        assert len(debug_calls) == 0, "Debug logging should be disabled"
-
-    @patch("keystone_keycloak_backend.identity.KeycloakAdmin")
-    @patch("keystone_keycloak_backend.identity.LOG")
-    def test_keycloak_with_retry_debug_logging(
-        self, mock_log, mock_admin_class, debug_driver
-    ):
-        """Test debug logging in _keycloak_with_retry method."""
-        # Mock KeycloakAdmin
-        mock_admin = Mock()
-        mock_admin_class.return_value = mock_admin
-
-        # Mock a successful operation
-        mock_operation = Mock(return_value="success")
-        mock_operation.__name__ = "test_operation"
-
-        # Test the method
-        result = debug_driver._keycloak_with_retry(mock_operation)
-        assert result == "success"
-
-        # Verify debug logs were called
-        debug_calls = [
-            call
-            for call in mock_log.warning.call_args_list
-            if "KEYCLOAK_DEBUG:" in str(call)
-        ]
-        assert len(debug_calls) >= 2, "Should log operation start and success"
-
-        # Check specific debug messages
-        call_messages = [str(call) for call in mock_log.warning.call_args_list]
-        assert any("Calling test_operation" in msg for msg in call_messages)
-        assert any("test_operation successful" in msg for msg in call_messages)
-
-
 class TestErrorHandling:
     """Test cases for error handling and retry logic."""
 
-    @pytest.mark.skip(reason="Property mocking complexity - TODO: Fix")
     @patch("keystone_keycloak_backend.identity.LOG")
-    def test_403_error_retry_with_debug(self, mock_log, debug_driver):
-        """Test 403 error handling with debug logging."""
+    def test_403_error_retry_with_debug(self, mock_log, service_account_driver):
+        """Test 403 error handling with retry logic."""
         # Import the actual exception type that the code handles
         from keystone_keycloak_backend.identity import keycloak_exceptions
 
@@ -265,43 +181,27 @@ class TestErrorHandling:
         mock_exception = keycloak_exceptions.KeycloakGetError("403 Forbidden")
         mock_exception.response_code = 403
 
-        # Mock operation that fails with 403, then succeeds
+        # Mock the keycloak property to return a mock admin client
+        mock_admin = Mock()
         mock_operation = Mock(side_effect=[mock_exception, "success"])
         mock_operation.__name__ = "test_operation"
+        mock_admin.test_operation = mock_operation
 
-        # Mock refresh method and Keycloak dependencies
-        with patch.object(debug_driver, "_refresh_token_and_client"), patch(
-            "keystone_keycloak_backend.identity.KeycloakAdmin"
-        ), patch(
-            "keystone_keycloak_backend.identity.KeycloakOpenID"
-        ) as mock_openid_class:
-
-            # Mock token acquisition
-            mock_openid = Mock()
-            mock_openid_class.return_value = mock_openid
-            mock_openid.token.return_value = {"access_token": "test-token"}
-
-            result = debug_driver._keycloak_with_retry(mock_operation)
+        # Mock the _create_keycloak_admin method to return our mock
+        with patch.object(
+            service_account_driver, "_create_keycloak_admin", return_value=mock_admin
+        ):
+            # First call should fail with 403, second should succeed after retry
+            result = service_account_driver._keycloak_with_retry(mock_operation)
 
         # Verify the operation was retried and succeeded
         assert result == "success"
         assert mock_operation.call_count == 2
 
-        # Verify debug logging for 403 retry
-        debug_calls = [
-            call
-            for call in mock_log.warning.call_args_list
-            if "KEYCLOAK_DEBUG:" in str(call)
-        ]
-        call_messages = [str(call) for call in debug_calls]
-        assert any(
-            "Got 403 for test_operation, refreshing token" in msg
-            for msg in call_messages
-        )
-
-    @pytest.mark.skip(reason="Property mocking complexity - TODO: Fix")
     @patch("keystone_keycloak_backend.identity.LOG")
-    def test_403_error_message_contains_realm_info(self, mock_log, debug_driver):
+    def test_403_error_message_contains_realm_info(
+        self, mock_log, service_account_driver
+    ):
         """Test that 403 error messages contain proper realm information."""
         # Import the actual exception type that the code handles
         from keystone_keycloak_backend.identity import keycloak_exceptions
@@ -310,44 +210,40 @@ class TestErrorHandling:
         mock_exception = keycloak_exceptions.KeycloakGetError("403 Forbidden")
         mock_exception.response_code = 403
 
-        # Mock operation that always fails with 403
+        # Mock operation that always fails with 403 (even after retry)
         mock_operation = Mock(side_effect=mock_exception)
         mock_operation.__name__ = "get_groups"
 
-        # Mock refresh method and Keycloak dependencies
-        with patch.object(debug_driver, "_refresh_token_and_client"), patch(
-            "keystone_keycloak_backend.identity.KeycloakAdmin"
-        ), patch(
-            "keystone_keycloak_backend.identity.KeycloakOpenID"
-        ) as mock_openid_class:
+        # Mock the keycloak property to return a mock admin client
+        mock_admin = Mock()
+        mock_admin.get_groups = mock_operation
 
-            # Mock token acquisition
-            mock_openid = Mock()
-            mock_openid_class.return_value = mock_openid
-            mock_openid.token.return_value = {"access_token": "test-token"}
-
-            # This should raise an Exception with realm info
+        with patch.object(
+            service_account_driver, "_create_keycloak_admin", return_value=mock_admin
+        ):
+            # This should raise an Exception with realm info after retry fails
             with pytest.raises(Exception) as exc_info:
-                debug_driver._keycloak_with_retry(mock_operation)
+                service_account_driver._keycloak_with_retry(mock_operation)
 
         # Verify the error message contains the correct realm information
         error_message = str(exc_info.value)
-        assert (
-            "realm 'test'" in error_message
-        )  # Should show actual realm name, not None
-        assert "get_groups" in error_message  # Should show operation name
-        assert "Service Account" in error_message  # Should show auth method
+        assert "realm 'test'" in error_message  # Should show actual realm name
+        assert "operation get_groups" in error_message  # Should show operation name
+        assert "service account" in error_message.lower()  # Should show auth method
         assert "keystone-client" in error_message  # Should show client ID
+        assert (
+            "Admin API endpoint" in error_message
+        )  # Should show detailed endpoint info
         assert (
             "/admin/realms/test/users" in error_message
         )  # Should show correct endpoint path
+        assert "Full error:" in error_message  # Should show original error
 
-    @pytest.mark.skip(reason="Property mocking complexity - TODO: Fix")
     @patch("keystone_keycloak_backend.identity.LOG")
     def test_403_error_message_short_when_debug_disabled(
         self, mock_log, service_account_driver
     ):
-        """Test that 403 error messages are short when debug=false."""
+        """Test that 403 error messages are concise."""
         # Import the actual exception type that the code handles
         from keystone_keycloak_backend.identity import keycloak_exceptions
 
@@ -359,39 +255,30 @@ class TestErrorHandling:
         mock_operation = Mock(side_effect=mock_exception)
         mock_operation.__name__ = "get_groups"
 
-        # Mock refresh method and Keycloak dependencies
-        with patch.object(service_account_driver, "_refresh_token_and_client"), patch(
-            "keystone_keycloak_backend.identity.KeycloakAdmin"
-        ), patch(
-            "keystone_keycloak_backend.identity.KeycloakOpenID"
-        ) as mock_openid_class:
+        # Mock the keycloak property to return a mock admin client
+        mock_admin = Mock()
+        mock_admin.get_groups = mock_operation
 
-            # Mock token acquisition
-            mock_openid = Mock()
-            mock_openid_class.return_value = mock_openid
-            mock_openid.token.return_value = {"access_token": "test-token"}
-
-            # This should raise an Exception with short error message
+        with patch.object(
+            service_account_driver, "_create_keycloak_admin", return_value=mock_admin
+        ):
+            # This should raise an Exception with concise error message
             with pytest.raises(Exception) as exc_info:
                 service_account_driver._keycloak_with_retry(mock_operation)
 
-        # Verify the error message is short and concise (debug=false)
+        # Verify the error message contains comprehensive information
         error_message = str(exc_info.value)
         assert "realm 'test'" in error_message
         assert "service account" in error_message.lower()
         assert "keystone-client" in error_message
-        assert "Check realm-management roles" in error_message
-        assert "Enable debug=true for details" in error_message
+        assert "operation get_groups" in error_message  # Should show operation name
+        assert "Admin API endpoint" in error_message  # Should show detailed info
+        assert "/admin/realms/test/users" in error_message  # Should show endpoint path
+        assert "Full error:" in error_message  # Should show original error
 
-        # Should NOT contain detailed debug information
-        assert "operation 'get_groups'" not in error_message
-        assert "/admin/realms/test/users" not in error_message
-        assert "Admin API endpoint" not in error_message
-
-    @pytest.mark.skip(reason="Property mocking complexity - TODO: Fix")
     @patch("keystone_keycloak_backend.identity.LOG")
     def test_debug_error_logging_conditional(self, mock_log, service_account_driver):
-        """Test that detailed error logging only happens when debug=true."""
+        """Test that detailed error logging happens via LOG.debug."""
         # Import the actual exception type that the code handles
         from keystone_keycloak_backend.identity import keycloak_exceptions
 
@@ -403,29 +290,45 @@ class TestErrorHandling:
         mock_operation = Mock(side_effect=mock_exception)
         mock_operation.__name__ = "get_groups"
 
-        # Mock refresh method and Keycloak dependencies
-        with patch.object(service_account_driver, "_refresh_token_and_client"), patch(
-            "keystone_keycloak_backend.identity.KeycloakAdmin"
-        ), patch(
-            "keystone_keycloak_backend.identity.KeycloakOpenID"
-        ) as mock_openid_class:
+        # Mock the keycloak property to return a mock admin client
+        mock_admin = Mock()
+        mock_admin.get_groups = mock_operation
 
-            # Mock token acquisition
-            mock_openid = Mock()
-            mock_openid_class.return_value = mock_openid
-            mock_openid.token.return_value = {"access_token": "test-token"}
-
-            # This should raise an Exception
+        with patch.object(
+            service_account_driver, "_create_keycloak_admin", return_value=mock_admin
+        ):
+            # This should raise an Exception and log debug info
             with pytest.raises(Exception):
                 service_account_driver._keycloak_with_retry(mock_operation)
 
-        # Verify NO detailed error logging happened (debug=false)
-        error_calls = [
+        # Verify debug logging happened during the operation
+        debug_calls = mock_log.debug.call_args_list
+
+        # Check for "Calling get_groups" log
+        calling_logs = [
             call
-            for call in mock_log.error.call_args_list
-            if "KEYCLOAK_ERROR:" in str(call)
+            for call in debug_calls
+            if len(call.args) >= 2
+            and call.args[0] == "Calling %s"
+            and call.args[1] == "get_groups"
         ]
-        assert len(error_calls) == 0, "Should not log detailed errors when debug=false"
+
+        # Check for "get_groups failed" log
+        failed_logs = [
+            call
+            for call in debug_calls
+            if len(call.args) >= 2
+            and call.args[0] == "%s failed: %s"
+            and call.args[1] == "get_groups"
+        ]
+
+        # Should have both calling and failure logs
+        assert (
+            len(calling_logs) > 0
+        ), f"Should log operation call. All calls: {debug_calls}"
+        assert (
+            len(failed_logs) > 0
+        ), f"Should log operation failure. All calls: {debug_calls}"
 
     def test_attribute_error_no_longer_handled(self, service_account_driver):
         """Test that AttributeError from python-keycloak 3.x is no longer an issue.
@@ -445,24 +348,6 @@ class TestErrorHandling:
             AttributeError, match="'NoneType' object has no attribute 'get'"
         ):
             service_account_driver._keycloak_with_retry(mock_operation)
-
-    def test_attribute_error_no_longer_handled_debug(self, debug_driver):
-        """Test that AttributeError is no longer handled even with debug mode.
-
-        Since we switched to direct authentication, we no longer trigger the
-        problematic python-keycloak 3.x code path.
-        """
-        # Mock operation that simulates the old AttributeError
-        original_operation = Mock(
-            side_effect=AttributeError("'NoneType' object has no attribute 'get'")
-        )
-        original_operation.__name__ = "get_user"
-
-        # This should raise AttributeError normally (no special handling)
-        with pytest.raises(
-            AttributeError, match="'NoneType' object has no attribute 'get'"
-        ):
-            debug_driver._keycloak_with_retry(original_operation)
 
     def test_non_token_attribute_error_passthrough(self, service_account_driver):
         """Test that non-token AttributeErrors are passed through normally."""
@@ -612,20 +497,6 @@ class TestConfigurationValidation:
         assert config.keycloak.user_realm_name == "master"
         assert not hasattr(config.keycloak, "client_secret_key")
 
-    def test_debug_flag_configuration(self):
-        """Test that debug flag is properly configured."""
-        # Test debug enabled
-        debug_config = MockConfig(auth_method="service_account", debug=True)
-        debug_driver = Driver(conf=debug_config)
-        assert debug_driver is not None
-        assert debug_config.keycloak.debug is True
-
-        # Test debug disabled (default)
-        normal_config = MockConfig(auth_method="service_account", debug=False)
-        normal_driver = Driver(conf=normal_config)
-        assert normal_driver is not None
-        assert normal_config.keycloak.debug is False
-
 
 class TestRealConfiguration:
     """Test cases that simulate real-world configuration scenarios."""
@@ -644,7 +515,6 @@ class TestRealConfiguration:
                         "client_id": "keystone-service",
                         "client_secret_key": "production-secret",
                         "verify": True,
-                        "debug": False,
                     },
                 )
 
@@ -676,7 +546,6 @@ class TestRealConfiguration:
                         "username": "admin",
                         "password": "admin",
                         "verify": False,
-                        "debug": True,
                     },
                 )
 
@@ -713,7 +582,6 @@ class TestRealConfiguration:
                         "client_id": "keystone-prod",
                         "client_secret_key": "prod-secret",
                         "verify": True,
-                        "debug": False,
                     },
                 ),
                 "register_group": lambda x: None,
@@ -737,7 +605,6 @@ class TestRealConfiguration:
                         "username": "legacy-admin",
                         "password": "legacy-pass",
                         "verify": False,
-                        "debug": True,
                     },
                 ),
                 "register_group": lambda x: None,

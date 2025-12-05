@@ -40,13 +40,11 @@ else
     /opt/keycloak/bin/kcadm.sh create realms -s realm=test2 -s enabled=true
 fi
 
-echo "Disable SSL requirement"
+echo "Customize realm settings"
 
-/opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
-/opt/keycloak/bin/kcadm.sh update realms/test1 -s sslRequired=NONE
-/opt/keycloak/bin/kcadm.sh update realms/test2 -s sslRequired=NONE
-
-echo "SSL requirement disabled"
+/opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE -s accessTokenLifespan=60
+/opt/keycloak/bin/kcadm.sh update realms/test1 -s sslRequired=NONE -s accessTokenLifespan=60
+/opt/keycloak/bin/kcadm.sh update realms/test2 -s sslRequired=NONE -s accessTokenLifespan=60
 
 echo "Create Keycloak client for Keystone integration in 'test1' realm"
 
