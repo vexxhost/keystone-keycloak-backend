@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.2.0...v0.3.0) (2025-12-08)
+
+
+### Features
+
+* add service account auth [A8E-64] ([#56](https://github.com/vexxhost/keystone-keycloak-backend/issues/56)) ([03e0044](https://github.com/vexxhost/keystone-keycloak-backend/commit/03e00443fe0b20c4589f7212635d918ad9824a96))
+* expose user attributes for email and description ([085a1d0](https://github.com/vexxhost/keystone-keycloak-backend/commit/085a1d096216eb3214f9244eae9ee04d22b41c6e))
+
 ## [0.2.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.1.8...v0.2.0) (2024-10-30)
 
 
