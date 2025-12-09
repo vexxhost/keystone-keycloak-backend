@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.3.0...v0.4.0) (2025-12-09)
+
+
+### Features
+
+* add missing tenacity dependency ([12bf878](https://github.com/vexxhost/keystone-keycloak-backend/commit/12bf8781a24d4d9db0afa1f81cd590e1d8f91b64))
+
 ## [0.3.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.2.0...v0.3.0) (2025-12-08)
 
 
