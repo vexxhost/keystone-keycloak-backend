@@ -9,7 +9,7 @@ packages = [{include = "keystone_keycloak_backend"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-python-keycloak = "^3.6.1"
+python-keycloak = "^5.0.0"
 tenacity = ">=6.3.1,<9.2.0"
 
 [tool.poetry.group.dev.dependencies]
