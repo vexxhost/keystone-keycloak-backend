@@ -898,7 +898,7 @@ class TestPagination:
                 }
                 for i in range(250)
             ]
-            return all_users[offset:offset + page_size]
+            return all_users[offset : offset + page_size]
 
         mock_admin.get_users.side_effect = mock_get_users
         mock_admin_class.return_value = mock_admin
@@ -937,7 +937,7 @@ class TestPagination:
                 }
                 for i in range(200)
             ]
-            return all_users[offset:offset + page_size]
+            return all_users[offset : offset + page_size]
 
         mock_admin.get_users.side_effect = mock_get_users
         mock_admin_class.return_value = mock_admin
@@ -994,7 +994,7 @@ class TestPagination:
                 }
                 for i in range(150)
             ]
-            return all_groups[offset:offset + page_size]
+            return all_groups[offset : offset + page_size]
 
         mock_admin.get_groups.side_effect = mock_get_groups
         mock_admin_class.return_value = mock_admin
@@ -1025,7 +1025,7 @@ class TestPagination:
                 }
                 for i in range(120)
             ]
-            return all_users[offset:offset + page_size]
+            return all_users[offset : offset + page_size]
 
         mock_admin.get_group_members.side_effect = mock_get_group_members
         mock_admin_class.return_value = mock_admin
@@ -1057,7 +1057,7 @@ class TestPagination:
                 }
                 for i in range(75)
             ]
-            return all_groups[offset:offset + page_size]
+            return all_groups[offset : offset + page_size]
 
         mock_admin.get_user_groups.side_effect = mock_get_user_groups
         mock_admin_class.return_value = mock_admin
