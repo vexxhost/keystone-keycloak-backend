@@ -20,6 +20,9 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_USER_COUNT: ${KEYCLOAK_USER_COUNT:-1000}
+      KEYCLOAK_GROUP_COUNT: ${KEYCLOAK_GROUP_COUNT:-1000}
+      KEYCLOAK_LOAD_DATA: ${KEYCLOAK_LOAD_DATA:-false}
     volumes:
       - ./hack/keycloak-init.sh:/opt/keycloak/keycloak-init.sh
     entrypoint: ["/bin/bash", "/opt/keycloak/keycloak-init.sh"]

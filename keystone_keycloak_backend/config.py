@@ -49,6 +49,12 @@ keycloak_opts = [
         default=True,
         help="Verify SSL certificate",
     ),
+    cfg.IntOpt(
+        "page_size",
+        default=100,
+        help="Default page size for list operations. "
+        "Set to 0 to disable pagination and fetch all results.",
+    ),
 ]
 
 

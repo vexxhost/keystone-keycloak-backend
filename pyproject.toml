@@ -16,6 +16,7 @@ tenacity = ">=6.3.1,<9.2.0"
 keystone = ">=22.0.0"
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"
+python-openstackclient = ">=6.0.0"
 
 [build-system]
 requires = ["poetry-core"]

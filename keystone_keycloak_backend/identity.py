@@ -124,6 +124,44 @@ class Driver(base.IdentityDriverBase):
             f"realm-management roles. Full error: {original_error}"
         )
 
+    def _fetch_all_paginated(self, operation, *args, **kwargs):
+        """Fetch all results from Keycloak using paginated API calls.
+
+        This method fetches data in batches using the configured page_size
+        to avoid timeout issues with large datasets, but returns ALL results.
+        """
+        page_size = self.conf.keycloak.page_size
+
+        # If page_size is 0, fetch all in single call (original behavior)
+        if page_size == 0:
+            return self._keycloak_with_retry(operation, *args, **kwargs)
+
+        all_results = []
+        offset = 0
+
+        while True:
+            # Build query with pagination parameters
+            query = kwargs.get("query", {}).copy()
+            query["first"] = offset
+            query["max"] = page_size
+            kwargs["query"] = query
+
+            # Fetch current page
+            results = self._keycloak_with_retry(operation, *args, **kwargs)
+
+            if not results:
+                break
+
+            all_results.extend(results)
+
+            # If we got fewer results than page_size, we've reached the end
+            if len(results) < page_size:
+                break
+
+            offset += page_size
+
+        return all_results
+
     def _keycloak_call_with_auth_retry(self, operation, *args, **kwargs):
         """Execute Keycloak operation with automatic retry on authentication errors."""
         for attempt in Retrying(
@@ -259,19 +297,17 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users(self, hints):
-        # TODO(mnaser): Hints
-        users = self._keycloak_with_retry(self.keycloak.get_users)
+        users = self._fetch_all_paginated(self.keycloak.get_users)
         return [self._format_user(u) for u in users]
 
     def unset_default_project_id(self, project_id):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users_in_group(self, group_id, hints):
-        # TODO: hints
         group_id = uuid.UUID(group_id)
 
         try:
-            users = self._keycloak_with_retry(self.keycloak.get_group_members, group_id)
+            users = self._fetch_all_paginated(self.keycloak.get_group_members, group_id)
         except keycloak_exceptions.KeycloakGetError as e:
             if e.response_code == 404:
                 raise exception.GroupNotFound(group_id=group_id)
@@ -353,14 +389,12 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_groups(self, hints):
-        # TODO: hints
-        groups = self._keycloak_with_retry(self.keycloak.get_groups)
+        groups = self._fetch_all_paginated(self.keycloak.get_groups)
         return self._format_groups(groups)
 
     def list_groups_for_user(self, user_id, hints):
-        # TODO: hints
         user_id = uuid.UUID(user_id)
-        groups = self._keycloak_with_retry(self.keycloak.get_user_groups, user_id)
+        groups = self._fetch_all_paginated(self.keycloak.get_user_groups, user_id)
         return self._format_groups(groups)
 
     def get_group(self, group_id):
