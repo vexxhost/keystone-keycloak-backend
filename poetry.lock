@@ -72,6 +72,18 @@ tests = ["attrs[tests-no-zope]", "zope-interface"]
 tests-no-zope = ["cloudpickle ; platform_python_implementation == \"CPython\"", "hypothesis", "mypy (>=1.1.1) ; platform_python_implementation == \"CPython\"", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins ; platform_python_implementation == \"CPython\" and python_version < \"3.11\"", "pytest-xdist[psutil]"]
 
 [[package]]
+name = "autopage"
+version = "0.5.2"
+description = "A library to provide automatic paging for console output"
+optional = false
+python-versions = ">=3.6"
+groups = ["dev"]
+files = [
+    {file = "autopage-0.5.2-py3-none-any.whl", hash = "sha256:f5eae54dd20ccc8b1ff611263fc87bc46608a9cde749bbcfc93339713a429c55"},
+    {file = "autopage-0.5.2.tar.gz", hash = "sha256:826996d74c5aa9f4b6916195547312ac6384bac3810b8517063f293248257b72"},
+]
+
+[[package]]
 name = "backports-zoneinfo"
 version = "0.2.1"
 description = "Backport of the standard library zoneinfo module"
@@ -351,6 +363,51 @@ files = [
 
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
+
+[[package]]
+name = "cliff"
+version = "4.7.0"
+description = "Command Line Interface Formulation Framework"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "cliff-4.7.0-py3-none-any.whl", hash = "sha256:7c5ef733b364532775166bb980eb43108e264d145c1892ff1c51f9b4af417c24"},
+    {file = "cliff-4.7.0.tar.gz", hash = "sha256:6ca45f8df519bbc0722c61049de7b7e442a465fa7f3f552b96d735fa26fd5b26"},
+]
+
+[package.dependencies]
+autopage = ">=0.4.0"
+cmd2 = ">=1.0.0"
+importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
+PrettyTable = ">=0.7.2"
+PyYAML = ">=3.12"
+stevedore = ">=2.0.1"
+
+[[package]]
+name = "cmd2"
+version = "2.5.8"
+description = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "cmd2-2.5.8-py3-none-any.whl", hash = "sha256:aeb6eb6cd6d783bb7d92d37aa920bcfa7379690ba9ab1188576562f73a13471c"},
+    {file = "cmd2-2.5.8.tar.gz", hash = "sha256:ddf29beaa7c9d4e9806eefad528a59c372ca97b4c0d83e019fef0e37c44f4497"},
+]
+
+[package.dependencies]
+gnureadline = {version = "*", markers = "platform_system == \"Darwin\""}
+pyperclip = "*"
+pyreadline3 = {version = "*", markers = "platform_system == \"Windows\""}
+wcwidth = "*"
+
+[package.extras]
+build = ["build", "setuptools", "setuptools-scm"]
+dev = ["codecov", "doc8", "invoke", "mypy", "pytest", "pytest-cov", "pytest-mock", "ruff", "sphinx", "sphinx-autobuild", "sphinx-rtd-theme", "twine"]
+docs = ["setuptools", "setuptools_scm", "sphinx", "sphinx-autobuild", "sphinx-rtd-theme"]
+test = ["codecov", "coverage", "pytest", "pytest-cov", "pytest-mock"]
+validate = ["mypy", "ruff", "types-setuptools"]
 
 [[package]]
 name = "colorama"
@@ -731,6 +788,54 @@ files = [
 ]
 
 [[package]]
+name = "gnureadline"
+version = "8.3.3"
+description = "The standard Python readline extension statically linked against the GNU readline library."
+optional = false
+python-versions = "*"
+groups = ["dev"]
+markers = "platform_system == \"Darwin\""
+files = [
+    {file = "gnureadline-8.3.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:a0427e9f75a0407391bdc2e0e76b06807b50a0e1fb73cf99b3d40a4dd1299c43"},
+    {file = "gnureadline-8.3.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:87a8d9ba3e87c495b9388ef5566a647d7ab1db345b841c745ae2c21033a37856"},
+    {file = "gnureadline-8.3.3-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8b798a83ebdb7d39731ac18011a212b6932899af64ad0d1ced3b8d5b4cb86d40"},
+    {file = "gnureadline-8.3.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:049988a12b8ae0f158b9fdc4dfec6813fc00503e11e86e6f520a6e43f8acc40f"},
+    {file = "gnureadline-8.3.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:fff8def8a9ec595e6dd9186bc4fc7061aaee34e4a0b762b120ef2398bbbbafc8"},
+    {file = "gnureadline-8.3.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:fa03cc35adeddb05412fda494b3d6851e810401341aa7abee7347f116dc74ad6"},
+    {file = "gnureadline-8.3.3-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4e686dd0b971c7c798f486d3050581d85b4ca4a59c503b8c722f4d9362d1c935"},
+    {file = "gnureadline-8.3.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1f14c7c24ca819c6a90ba652bb0575f8d31c9ba8691f24b4fa249b175d9e531b"},
+    {file = "gnureadline-8.3.3-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:04ad9724dd1783d140146a1e83313918741975c1226a5dfa1b2e97560d8e36c7"},
+    {file = "gnureadline-8.3.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:831599cd9fea95eae2110646d274ed0fe0e0c20cf32e0eb01a5225d9dad4f1b4"},
+    {file = "gnureadline-8.3.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ad431a93d1bdde49782530fd86e2856ac0518407a69bef9af7fb2dfc92003903"},
+    {file = "gnureadline-8.3.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3d4a0936de1365e193c8328e84b688a0bee1398b7d9413d5e67bcf92a10a525f"},
+    {file = "gnureadline-8.3.3-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:14df36d06f8102caadff0df0a87ba33b381c2b22904f0ed2ad527784f5ec9f46"},
+    {file = "gnureadline-8.3.3-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:75519fea565510a868389cd841e45d64140a323d723dda30edf72009c2e3362f"},
+    {file = "gnureadline-8.3.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1267ba734d24ffbc8967191c5bc213f6dd8718284d917c69a3ee7d2541e60179"},
+    {file = "gnureadline-8.3.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a326ef2fb5e213518b96ef41b1f74c12f61d2ac8c2dca9ae6dbf88991b46244e"},
+    {file = "gnureadline-8.3.3-cp313-cp313t-macosx_10_13_x86_64.whl", hash = "sha256:8012e70db91f13409f36655a10f9752c43d9848de6d1ed379b526f3f8a449a44"},
+    {file = "gnureadline-8.3.3-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:da1335bdc70fc99f45578d7cdeb89bd5a16e0d26785bbe5bcc1dc1acdd7a7734"},
+    {file = "gnureadline-8.3.3-cp313-cp313t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:11e4d8572eba509aca690e026928e1cd3df3f1b5ec39b551c6571cfd559f84e1"},
+    {file = "gnureadline-8.3.3-cp313-cp313t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5b10e62f86f3738682ac5df2165fa711eba1f35193dc8a1af20d794434ca2816"},
+    {file = "gnureadline-8.3.3-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:251495414ee34dd7f068e0c4f09ee46f068e0e08a75428a7fbdf41a8ffa8bb27"},
+    {file = "gnureadline-8.3.3-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:8513db40b4c5404ad3e883ad747e0cf113ec7b0b884dff1f6f873f9a1c1d2432"},
+    {file = "gnureadline-8.3.3-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c1dabc49d09ab802dccb9f8057956cf9561b2ff9e5e4f7c2e2ad103356b2397d"},
+    {file = "gnureadline-8.3.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:320c9c47ecbfa2ea89f1821fa289b6f41f830654832a6069329dc3dda06f6784"},
+    {file = "gnureadline-8.3.3-cp314-cp314t-macosx_10_15_x86_64.whl", hash = "sha256:dfd893dac7b63f71dc41dce5d31c05388e55cb7bc6b58535e2a0eb29a5ad0352"},
+    {file = "gnureadline-8.3.3-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:1a954229ac14210f8efbbd724184f26a09a5b85ddb027a1f4ab64c22da59cf69"},
+    {file = "gnureadline-8.3.3-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f7c23f4bf5c67d337a9e1a9c3e77e0eaadef76642c36e52f5fac31ef1eb5111e"},
+    {file = "gnureadline-8.3.3-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a27edaec97f038ba3eafa69fc79fa82bedf963319502fa065361ac1b1edffb3e"},
+    {file = "gnureadline-8.3.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:52357146c072525113e4f572ff2d1e302edb8f04cd93e76b3e7d08e36a6f680b"},
+    {file = "gnureadline-8.3.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:6d113859beefa0136e09b9ed20c8da31990f133d3536cd34f5665ee40ed2f261"},
+    {file = "gnureadline-8.3.3-cp38-cp38-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e2389a957241b3d6d84bd2f575b7e40d8466f5cd4809dfea4a31b166fa135f68"},
+    {file = "gnureadline-8.3.3-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:95657d44373897b853077605c0587fa9ed1077fef5f22da638c9a73f0500c1d5"},
+    {file = "gnureadline-8.3.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:656cc27bbb5cbe2b8fe1b367768931b48dd85a1bf3aa03e980618388ff3da376"},
+    {file = "gnureadline-8.3.3-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:176f78055a19e0d3774263a45e3cd25d56707189cd558a6259939e688752d52e"},
+    {file = "gnureadline-8.3.3-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:34c49ebd2d41bf2ea758a68866dc19212abdc668fbcfc4928910d031f7a045e4"},
+    {file = "gnureadline-8.3.3-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8c04e2c1f3f24a17c4e7b5789192e63c2fa5441475b7134cb8c3d066615a5c69"},
+    {file = "gnureadline-8.3.3.tar.gz", hash = "sha256:0972392bd2f31244e2d981178246fe8b729c8766454fdaeb275946ac47b7e9fd"},
+]
+
+[[package]]
 name = "greenlet"
 version = "2.0.2"
 description = "Lightweight in-process concurrent programming"
@@ -914,6 +1019,45 @@ MarkupSafe = ">=2.0"
 
 [package.extras]
 i18n = ["Babel (>=2.7)"]
+
+[[package]]
+name = "jmespath"
+version = "1.0.1"
+description = "JSON Matching Expressions"
+optional = false
+python-versions = ">=3.7"
+groups = ["dev"]
+files = [
+    {file = "jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980"},
+    {file = "jmespath-1.0.1.tar.gz", hash = "sha256:90261b206d6defd58fdd5e85f478bf633a2901798906be2ad389150c5c60edbe"},
+]
+
+[[package]]
+name = "jsonpatch"
+version = "1.33"
+description = "Apply JSON-Patches (RFC 6902)"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*"
+groups = ["dev"]
+files = [
+    {file = "jsonpatch-1.33-py2.py3-none-any.whl", hash = "sha256:0ae28c0cd062bbd8b8ecc26d7d164fbbea9652a1a3693f3b956c1eae5145dade"},
+    {file = "jsonpatch-1.33.tar.gz", hash = "sha256:9fcd4009c41e6d12348b4a0ff2563ba56a2923a7dfee731d004e212e1ee5030c"},
+]
+
+[package.dependencies]
+jsonpointer = ">=1.9"
+
+[[package]]
+name = "jsonpointer"
+version = "3.0.0"
+description = "Identify specific nodes in a JSON document (RFC 6901)"
+optional = false
+python-versions = ">=3.7"
+groups = ["dev"]
+files = [
+    {file = "jsonpointer-3.0.0-py2.py3-none-any.whl", hash = "sha256:13e088adc14fca8b6aa8177c044e12701e6ad4b28ff10e65f2267a90109c9942"},
+    {file = "jsonpointer-3.0.0.tar.gz", hash = "sha256:2b2d729f2091522d61c3b31f82e11870f60b68f43fbc705cb76bf4b832af59ef"},
+]
 
 [[package]]
 name = "jsonschema"
@@ -1351,6 +1495,33 @@ signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
+name = "openstacksdk"
+version = "4.0.1"
+description = "An SDK for building applications to work with OpenStack"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "openstacksdk-4.0.1-py3-none-any.whl", hash = "sha256:d63187a006fff7c1de1486c9e2e1073a787af402620c3c0ed0cf5291225998ac"},
+    {file = "openstacksdk-4.0.1.tar.gz", hash = "sha256:19faa1d5e6a78a2c1dc06a171e65e776ba82e9df23e1d08586225dc5ade9fc63"},
+]
+
+[package.dependencies]
+cryptography = ">=2.7"
+decorator = ">=4.4.1"
+"dogpile.cache" = ">=0.6.5"
+iso8601 = ">=0.1.11"
+jmespath = ">=0.9.0"
+jsonpatch = ">=1.16,<1.20 || >1.20"
+keystoneauth1 = ">=3.18.0"
+netifaces = ">=0.10.4"
+os-service-types = ">=1.7.0"
+pbr = ">=2.0.0,<2.1.0 || >2.1.0"
+platformdirs = ">=3"
+PyYAML = ">=3.13"
+requestsexceptions = ">=1.2.0"
+
+[[package]]
 name = "os-service-types"
 version = "1.7.0"
 description = "Python library for consuming OpenStack sevice-types-authority data"
@@ -1364,6 +1535,28 @@ files = [
 
 [package.dependencies]
 pbr = ">=2.0.0,<2.1.0 || >2.1.0"
+
+[[package]]
+name = "osc-lib"
+version = "4.0.2"
+description = "OpenStackClient Library"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "osc_lib-4.0.2-py3-none-any.whl", hash = "sha256:41d1466489d3f8799684ca4794c25356d508e57375de010398080ccec4708e18"},
+    {file = "osc_lib-4.0.2.tar.gz", hash = "sha256:403f9d4cc1b13d934a3483b43afaf50886447a224fec74ada2b6c7087ad3d77d"},
+]
+
+[package.dependencies]
+cliff = ">=3.2.0"
+keystoneauth1 = ">=3.14.0"
+openstacksdk = ">=0.15.0"
+"oslo.i18n" = ">=3.15.3"
+"oslo.utils" = ">=3.33.0"
+pbr = ">=2.0.0,<2.1.0 || >2.1.0"
+requests = ">=2.14.2"
+stevedore = ">=1.20.0"
 
 [[package]]
 name = "oslo-cache"
@@ -1829,6 +2022,23 @@ files = [
 ]
 
 [[package]]
+name = "platformdirs"
+version = "4.3.6"
+description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "platformdirs-4.3.6-py3-none-any.whl", hash = "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb"},
+    {file = "platformdirs-4.3.6.tar.gz", hash = "sha256:357fb2acbc885b0419afd3ce3ed34564c13c9b95c89360cd9563f73aa5e2b907"},
+]
+
+[package.extras]
+docs = ["furo (>=2024.8.6)", "proselint (>=0.14)", "sphinx (>=8.0.2)", "sphinx-autodoc-typehints (>=2.4)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.2)", "pytest-cov (>=5)", "pytest-mock (>=3.14)"]
+type = ["mypy (>=1.11.2)"]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 description = "plugin and hook calling mechanisms for python"
@@ -1973,6 +2183,34 @@ files = [
 diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
+name = "pyperclip"
+version = "1.11.0"
+description = "A cross-platform clipboard module for Python. (Only handles plain text for now.)"
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "pyperclip-1.11.0-py3-none-any.whl", hash = "sha256:299403e9ff44581cb9ba2ffeed69c7aa96a008622ad0c46cb575ca75b5b84273"},
+    {file = "pyperclip-1.11.0.tar.gz", hash = "sha256:244035963e4428530d9e3a6101a1ef97209c6825edab1567beac148ccc1db1b6"},
+]
+
+[[package]]
+name = "pyreadline3"
+version = "3.5.4"
+description = "A python implementation of GNU readline."
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+markers = "platform_system == \"Windows\""
+files = [
+    {file = "pyreadline3-3.5.4-py3-none-any.whl", hash = "sha256:eaf8e6cc3c49bcccf145fc6067ba8643d1df34d604a1ec0eccbf7a18e6d3fae6"},
+    {file = "pyreadline3-3.5.4.tar.gz", hash = "sha256:8d57d53039a1c75adba8e50dd3d992b28143480816187ea5efbd5c78e6c885b7"},
+]
+
+[package.extras]
+dev = ["build", "flake8", "mypy", "pytest", "twine"]
+
+[[package]]
 name = "pysaml2"
 version = "7.3.1"
 description = "Python implementation of SAML Version 2 Standard"
@@ -2040,6 +2278,27 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtualenv"]
 
 [[package]]
+name = "python-cinderclient"
+version = "9.6.0"
+description = "OpenStack Block Storage API Client Library"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "python-cinderclient-9.6.0.tar.gz", hash = "sha256:3fefde268252e52e30fe2773f658227a78c6dee378fcb132d31c86e6ec9ba238"},
+    {file = "python_cinderclient-9.6.0-py3-none-any.whl", hash = "sha256:3a8a3a3eded306fd3051797398556ca174c8ddb51f6f8c6d8d14fc83fa2f8d54"},
+]
+
+[package.dependencies]
+keystoneauth1 = ">=5.0.0"
+"oslo.i18n" = ">=5.0.1"
+"oslo.utils" = ">=4.8.0"
+pbr = ">=5.5.0"
+PrettyTable = ">=0.7.2"
+requests = ">=2.25.1"
+stevedore = ">=3.3.0"
+
+[[package]]
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
@@ -2099,6 +2358,31 @@ pbr = ">=2.0.0,<2.1.0 || >2.1.0"
 requests = ">=2.14.2"
 six = ">=1.10.0"
 stevedore = ">=1.20.0"
+
+[[package]]
+name = "python-openstackclient"
+version = "7.1.4"
+description = "OpenStack Command-line Client"
+optional = false
+python-versions = ">=3.8"
+groups = ["dev"]
+files = [
+    {file = "python-openstackclient-7.1.4.tar.gz", hash = "sha256:a32d012ebd58dbb5d91854c5f1ce5d1824a0297f520ac3d2d4e4d8ad8035773f"},
+    {file = "python_openstackclient-7.1.4-py3-none-any.whl", hash = "sha256:55891366f62e998bc855721a84220da2c3b3119223f3c839b006b460c93e69ca"},
+]
+
+[package.dependencies]
+cliff = ">=3.5.0"
+cryptography = ">=2.7"
+iso8601 = ">=0.1.11"
+openstacksdk = ">=3.3.0"
+osc-lib = ">=2.3.0"
+"oslo.i18n" = ">=3.15.3"
+pbr = ">=2.0.0,<2.1.0 || >2.1.0"
+python-cinderclient = ">=3.3.0"
+python-keystoneclient = ">=3.22.0"
+requests = ">=2.27.0"
+stevedore = ">=2.0.1"
 
 [[package]]
 name = "pytz"
@@ -2241,6 +2525,18 @@ files = [
 
 [package.dependencies]
 requests = ">=2.0.1,<3.0.0"
+
+[[package]]
+name = "requestsexceptions"
+version = "1.4.0"
+description = "Import exceptions from potentially bundled packages in requests."
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "requestsexceptions-1.4.0-py2.py3-none-any.whl", hash = "sha256:3083d872b6e07dc5c323563ef37671d992214ad9a32b0ca4a3d7f5500bf38ce3"},
+    {file = "requestsexceptions-1.4.0.tar.gz", hash = "sha256:b095cbc77618f066d459a02b137b020c37da9f46d9b057704019c9f77dba3065"},
+]
 
 [[package]]
 name = "rfc3986"
@@ -3020,4 +3316,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.8"
-content-hash = "d22300b770809af1668ee9c6e30aaf779d02b99f84e21c307a65c64246735cc5"
+content-hash = "d4ca71c35ed7c30a5ec8feb509dc61c62310c0c6739579f6ad9f00b03f810869"
