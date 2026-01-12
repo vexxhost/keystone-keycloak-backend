@@ -89,6 +89,163 @@ setup_keystone_client() {
     --rolename "view-users" 2>/dev/null || true
 }
 
+# Function to disable "always read from LDAP" on default attribute mappers
+# This prevents Keycloak from querying LDAP for each user on every request
+disable_always_read_from_ldap() {
+  local realm_name="$1"
+  local provider_id="$2"
+
+  echo "Disabling 'always read from LDAP' on default mappers..."
+
+  # Mappers that have always.read.value.from.ldap=true by default:
+  # - first name, last name, modify date, creation date
+  local mappers=("first name" "last name" "modify date" "creation date")
+
+  for mapper_name in "${mappers[@]}"; do
+    local mapper_id
+    mapper_id=$($KCADM get components -r "$realm_name" \
+      -q "name=$mapper_name" -q "parentId=$provider_id" --fields id 2>/dev/null \
+      | grep '"id"' | head -1 | sed 's/.*"id" : "\(.*\)".*/\1/')
+
+    if [ -n "$mapper_id" ]; then
+      echo "  Updating mapper '$mapper_name' (id: $mapper_id)"
+      # Fetch current config, modify it, and update (partial updates don't work with kcadm)
+      local current_config
+      current_config=$($KCADM get "components/$mapper_id" -r "$realm_name" 2>/dev/null)
+
+      # Replace "true" with "false" for always.read.value.from.ldap and update
+      echo "$current_config" | sed 's/"always.read.value.from.ldap" : \[ "true" \]/"always.read.value.from.ldap" : [ "false" ]/' \
+        | $KCADM update "components/$mapper_id" -r "$realm_name" -f - 2>/dev/null || true
+    fi
+  done
+
+  echo "Mapper configuration updated."
+}
+
+# Function to setup LDAP user federation
+setup_ldap_federation() {
+  local realm_name="$1"
+  local ldap_host="${LDAP_HOST:-ldap}"
+  local ldap_port="${LDAP_PORT:-1389}"
+  local provider_name="ldap-provider"
+
+  echo "Setting up LDAP user federation in realm '$realm_name'..."
+
+  # Check if LDAP provider already exists
+  local existing_provider
+  existing_provider=$($KCADM get components -r "$realm_name" -q "name=$provider_name" --fields id 2>/dev/null || true)
+
+  if echo "$existing_provider" | grep -q '"id"'; then
+    echo "LDAP provider '$provider_name' already exists in realm '$realm_name', skipping creation."
+    LDAP_PROVIDER_ID=$(echo "$existing_provider" | grep '"id"' | head -1 | sed 's/.*"id" : "\(.*\)".*/\1/')
+  else
+    echo "Creating LDAP provider '$provider_name' in realm '$realm_name'"
+
+    # Create LDAP user storage provider
+    $KCADM create components -r "$realm_name" \
+      -s name="$provider_name" \
+      -s providerId=ldap \
+      -s providerType=org.keycloak.storage.UserStorageProvider \
+      -s 'config.enabled=["true"]' \
+      -s 'config.priority=["0"]' \
+      -s 'config.editMode=["READ_ONLY"]' \
+      -s 'config.syncRegistrations=["false"]' \
+      -s 'config.vendor=["other"]' \
+      -s "config.connectionUrl=[\"ldap://${ldap_host}:${ldap_port}\"]" \
+      -s 'config.bindDn=["cn=serviceuser,ou=svcaccts,dc=example,dc=com"]' \
+      -s 'config.bindCredential=["mysecret"]' \
+      -s 'config.usersDn=["ou=users,dc=example,dc=com"]' \
+      -s 'config.usernameLDAPAttribute=["cn"]' \
+      -s 'config.rdnLDAPAttribute=["cn"]' \
+      -s 'config.uuidLDAPAttribute=["entryUUID"]' \
+      -s 'config.userObjectClasses=["inetOrgPerson, organizationalPerson"]' \
+      -s 'config.authType=["simple"]' \
+      -s 'config.searchScope=["1"]' \
+      -s 'config.useTruststoreSpi=["ldapsOnly"]' \
+      -s 'config.connectionPooling=["false"]' \
+      -s 'config.connectionTimeout=["30000"]' \
+      -s 'config.readTimeout=["30000"]' \
+      -s 'config.pagination=["true"]' \
+      -s 'config.fullSyncPeriod=["-1"]' \
+      -s 'config.batchSizeForSync=["1000"]' \
+      -s 'config.changedSyncPeriod=["600"]' \
+      -s 'config.cachePolicy=["DEFAULT"]' \
+      -s 'config.importEnabled=["true"]'
+
+    # Get the created provider ID
+    LDAP_PROVIDER_ID=$($KCADM get components -r "$realm_name" -q "name=$provider_name" --fields id \
+      | grep '"id"' | head -1 | sed 's/.*"id" : "\(.*\)".*/\1/')
+  fi
+
+  echo "LDAP Provider ID: $LDAP_PROVIDER_ID"
+
+  # Disable "always read from LDAP" on default mappers for better performance
+  disable_always_read_from_ldap "$realm_name" "$LDAP_PROVIDER_ID"
+
+  # Setup LDAP group mapper
+  setup_ldap_group_mapper "$realm_name" "$LDAP_PROVIDER_ID"
+
+  # Trigger full user sync
+  echo "Triggering full LDAP user sync..."
+  $KCADM create "user-storage/$LDAP_PROVIDER_ID/sync?action=triggerFullSync" -r "$realm_name" 2>/dev/null || true
+
+  echo "LDAP federation setup complete."
+}
+
+# Function to setup LDAP group mapper
+setup_ldap_group_mapper() {
+  local realm_name="$1"
+  local parent_id="$2"
+  local mapper_name="ldap-group-mapper"
+
+  echo "Setting up LDAP group mapper..."
+
+  # Check if group mapper already exists
+  local existing_mapper
+  existing_mapper=$($KCADM get components -r "$realm_name" -q "name=$mapper_name" -q "parentId=$parent_id" --fields id 2>/dev/null || true)
+
+  if echo "$existing_mapper" | grep -q '"id"'; then
+    echo "Group mapper '$mapper_name' already exists, skipping creation."
+    return
+  fi
+
+  echo "Creating LDAP group mapper '$mapper_name'"
+
+  # Use JSON input to avoid shell escaping issues with config keys containing dots
+  $KCADM create components -r "$realm_name" -f - << EOF
+{
+  "name": "$mapper_name",
+  "providerId": "group-ldap-mapper",
+  "providerType": "org.keycloak.storage.ldap.mappers.LDAPStorageMapper",
+  "parentId": "$parent_id",
+  "config": {
+    "groups.dn": ["ou=groups,dc=example,dc=com"],
+    "group.name.ldap.attribute": ["cn"],
+    "group.object.classes": ["groupOfNames"],
+    "preserve.group.inheritance": ["false"],
+    "membership.ldap.attribute": ["member"],
+    "membership.attribute.type": ["DN"],
+    "membership.user.ldap.attribute": ["cn"],
+    "groups.ldap.filter": [""],
+    "mode": ["READ_ONLY"],
+    "user.roles.retrieve.strategy": ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"],
+    "memberof.ldap.attribute": ["memberOf"],
+    "drop.non.existing.groups.during.sync": ["false"]
+  }
+}
+EOF
+
+  # Trigger group sync
+  echo "Triggering LDAP group sync..."
+  local mapper_id
+  mapper_id=$($KCADM get components -r "$realm_name" -q "name=$mapper_name" --fields id \
+    | grep '"id"' | head -1 | sed 's/.*"id" : "\(.*\)".*/\1/')
+
+  $KCADM create "user-storage/$parent_id/mappers/$mapper_id/sync?direction=fedToKeycloak" -r "$realm_name" 2>/dev/null || true
+
+  echo "LDAP group mapper setup complete."
+}
+
 # Function to create bulk users and groups
 create_bulk_data() {
   local realm_name="$1"
@@ -97,7 +254,7 @@ create_bulk_data() {
 
   echo "Creating $user_count users in realm '$realm_name'..."
   for i in $(seq 1 "$user_count"); do
-    local username="testuser$(printf '%04d' $i)"
+    local username="local-testuser$(printf '%04d' $i)"
 
     $KCADM create users \
       -r "$realm_name" \
@@ -116,7 +273,7 @@ create_bulk_data() {
 
   echo "Creating $group_count groups in realm '$realm_name'..."
   for i in $(seq 1 "$group_count"); do
-    local groupname="testgroup$(printf '%03d' $i)"
+    local groupname="local-testgroup$(printf '%03d' $i)"
 
     $KCADM create groups \
       -r "$realm_name" \
@@ -137,11 +294,18 @@ create_realm "test2"
 # Setup Keystone client (only for test1 realm)
 setup_keystone_client "test1"
 
-# Create bulk test data if KEYCLOAK_LOAD_DATA is set to 'true'
-if [ "${KEYCLOAK_LOAD_DATA}" = "true" ]; then
-  create_bulk_data "test1" "${KEYCLOAK_USER_COUNT:-1000}" "${KEYCLOAK_GROUP_COUNT:-1000}"
+# Create bulk test data if KEYCLOAK_LOAD_LOCAL_DATA is set to 'true'
+if [ "${KEYCLOAK_LOAD_LOCAL_DATA}" = "true" ]; then
+  create_bulk_data "test1" "${KEYCLOAK_LOCAL_USER_COUNT:-1000}" "${KEYCLOAK_LOCAL_GROUP_COUNT:-1000}"
 else
-  echo "Skipping bulk data creation (KEYCLOAK_LOAD_DATA=${KEYCLOAK_LOAD_DATA})"
+  echo "Skipping local bulk data creation (KEYCLOAK_LOAD_LOCAL_DATA=${KEYCLOAK_LOAD_LOCAL_DATA})"
+fi
+
+# Setup LDAP federation if KEYCLOAK_LOAD_LDAP_DATA is set to 'true'
+if [ "${KEYCLOAK_LOAD_LDAP_DATA}" = "true" ]; then
+  setup_ldap_federation "test1"
+else
+  echo "Skipping LDAP federation setup (KEYCLOAK_LOAD_LDAP_DATA=${KEYCLOAK_LOAD_LDAP_DATA})"
 fi
 
 echo "Environment setup complete. Keeping container running."

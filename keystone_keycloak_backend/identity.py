@@ -162,6 +162,72 @@ class Driver(base.IdentityDriverBase):
 
         return all_results
 
+    def _build_user_query_from_hints(self, hints):
+        """Build Keycloak query parameters from Keystone driver hints.
+
+        Converts Keystone 'name' filter to Keycloak 'username' query parameter.
+        Keystone only filters users by name (username) or id in practice.
+
+        Returns:
+            dict: Query parameters for Keycloak get_users API
+            list: List of filter names that were processed (to mark as satisfied)
+        """
+        query = {}
+        processed_filters = []
+
+        if not hints:
+            return query, processed_filters
+
+        for filt in hints.filters:
+            filter_name = filt.get("name")
+            filter_value = filt.get("value")
+            comparator = filt.get("comparator", "equals")
+
+            # Only handle 'name' filter - Keystone uses this for username lookups
+            if filter_name == "name" and filter_value:
+                if comparator == "equals":
+                    query["username"] = filter_value
+                    query["exact"] = True
+                    processed_filters.append(filter_name)
+                    LOG.debug("Added exact username filter: %s", filter_value)
+                elif comparator in ("contains", "startswith"):
+                    query["username"] = filter_value
+                    processed_filters.append(filter_name)
+                    LOG.debug("Added prefix username filter: %s", filter_value)
+
+        return query, processed_filters
+
+    def _build_group_query_from_hints(self, hints):
+        """Build Keycloak query parameters from Keystone driver hints for groups.
+
+        Returns:
+            dict: Query parameters for Keycloak get_groups API
+            list: List of filter names that were processed
+        """
+        query = {}
+        processed_filters = []
+
+        if not hints:
+            return query, processed_filters
+
+        for filt in hints.filters:
+            filter_name = filt.get("name")
+            filter_value = filt.get("value")
+            comparator = filt.get("comparator", "equals")
+
+            if filter_name == "name" and filter_value:
+                if comparator == "equals":
+                    query["search"] = filter_value
+                    query["exact"] = True
+                    processed_filters.append(filter_name)
+                    LOG.debug("Added exact group filter: name=%s", filter_value)
+                elif comparator in ("contains", "startswith"):
+                    query["search"] = filter_value
+                    processed_filters.append(filter_name)
+                    LOG.debug("Added prefix group filter: name=%s", filter_value)
+
+        return query, processed_filters
+
     def _keycloak_call_with_auth_retry(self, operation, *args, **kwargs):
         """Execute Keycloak operation with automatic retry on authentication errors."""
         for attempt in Retrying(
@@ -297,7 +363,25 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users(self, hints):
-        users = self._fetch_all_paginated(self.keycloak.get_users)
+        # Build query from hints for server-side filtering
+        query, processed_filters = self._build_user_query_from_hints(hints)
+
+        # Always use briefRepresentation for better performance
+        query["briefRepresentation"] = True
+
+        if processed_filters:
+            # Filtered query: single API call (fast path)
+            users = self._keycloak_with_retry(self.keycloak.get_users, query=query)
+            LOG.debug(
+                "Filtered query with %s returned %d users",
+                processed_filters,
+                len(users),
+            )
+        else:
+            # Unfiltered query: use pagination to avoid timeout
+            users = self._fetch_all_paginated(self.keycloak.get_users, query=query)
+            LOG.debug("Unfiltered query returned %d users (paginated)", len(users))
+
         return [self._format_user(u) for u in users]
 
     def unset_default_project_id(self, project_id):
@@ -307,6 +391,7 @@ class Driver(base.IdentityDriverBase):
         group_id = uuid.UUID(group_id)
 
         try:
+            # Use pagination - groups can have many members
             users = self._fetch_all_paginated(self.keycloak.get_group_members, group_id)
         except keycloak_exceptions.KeycloakGetError as e:
             if e.response_code == 404:
@@ -389,12 +474,28 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_groups(self, hints):
-        groups = self._fetch_all_paginated(self.keycloak.get_groups)
+        # Build query from hints for server-side filtering
+        query, processed_filters = self._build_group_query_from_hints(hints)
+
+        if processed_filters:
+            # Filtered query: single API call (fast path)
+            groups = self._keycloak_with_retry(self.keycloak.get_groups, query=query)
+            LOG.debug(
+                "Filtered query with %s returned %d groups",
+                processed_filters,
+                len(groups),
+            )
+        else:
+            # Unfiltered query: use pagination to avoid timeout
+            groups = self._fetch_all_paginated(self.keycloak.get_groups, query=query)
+            LOG.debug("Unfiltered query returned %d groups (paginated)", len(groups))
+
         return self._format_groups(groups)
 
     def list_groups_for_user(self, user_id, hints):
         user_id = uuid.UUID(user_id)
-        groups = self._fetch_all_paginated(self.keycloak.get_user_groups, user_id)
+        # Single API call - user's group membership is typically a small result set
+        groups = self._keycloak_with_retry(self.keycloak.get_user_groups, user_id)
         return self._format_groups(groups)
 
     def get_group(self, group_id):

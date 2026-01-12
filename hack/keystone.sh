@@ -22,6 +22,7 @@ server_url = http://keycloak:8080
 realm_name = test1
 client_id = keystone-client
 client_secret_key = 12345abcdeFGHIJKLMN67890qrstuvWXYZ
+page_size = 500
 EOF
 
 cat << EOF | sudo tee /etc/keystone/domains/keystone.keycloak-legacy.conf
@@ -98,4 +99,5 @@ exec uwsgi \
   --lazy \
   --uid keystone \
   --gid keystone \
-  --http-socket 0.0.0.0:5000
+  --http-socket 0.0.0.0:5000 \
+  --processes 4
