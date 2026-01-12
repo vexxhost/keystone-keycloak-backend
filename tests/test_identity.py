@@ -1101,6 +1101,7 @@ class TestPagination:
         service_account_driver.list_users(hints=None)
 
         # Verify the query parameters for each call
-        assert calls[0] == {"first": 0, "max": 100}
-        assert calls[1] == {"first": 100, "max": 100}
-        assert calls[2] == {"first": 200, "max": 100}
+        # briefRepresentation=True is always included for performance
+        assert calls[0] == {"briefRepresentation": True, "first": 0, "max": 100}
+        assert calls[1] == {"briefRepresentation": True, "first": 100, "max": 100}
+        assert calls[2] == {"briefRepresentation": True, "first": 200, "max": 100}
