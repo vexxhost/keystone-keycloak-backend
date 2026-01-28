@@ -26,7 +26,6 @@ The driver is configured via Keystone's domain-specific configuration. Create a 
 | `realm_name` | - | Yes | Keycloak realm name containing users and groups |
 | `client_id` | `admin-cli` | No | Keycloak client ID |
 | `verify` | `True` | No | Verify SSL certificate. Set to `False` for self-signed certs |
-| `page_size` | `100` | No | Number of records per API call. Set to `0` to disable pagination |
 
 ### Authentication Methods
 
@@ -45,7 +44,6 @@ server_url = http://keycloak:8080
 realm_name = test1
 client_id = keystone-client
 client_secret_key = 12345abcdeFGHIJKLMN67890qrstuvWXYZ
-page_size = 1000
 ```
 
 | Option | Description |
@@ -68,7 +66,6 @@ client_id = admin-cli
 username = admin
 password = admin
 user_realm_name = master
-page_size = 1000
 ```
 
 | Option | Description |
@@ -76,40 +73,6 @@ page_size = 1000
 | `username` | Admin username |
 | `password` | Admin password |
 | `user_realm_name` | Realm where admin credentials exist. Defaults to `realm_name` if not specified. Use `master` if authenticating with a Keycloak admin user |
-
-### Pagination
-
-**Benefits of pagination:**
-
-- **Prevents timeouts**: Without pagination, listing thousands of users in a single API call can timeout
-- **Controlled memory usage**: Fetches data in manageable batches rather than loading everything at once
-- **Better error recovery**: If a request fails, only that page needs to be retried
-- **Individual lookups remain fast**: Single user/group lookups (`openstack user show <username> --domain <domain>`) use server-side filtering and return quickly regardless of total user count
-
-## LDAP Federation Performance
-
-When using Keycloak with LDAP user federation, performance depends heavily on the `connectionPooling` setting:
-
-| Setting | 5000 users list time | Behavior |
-| ------- | -------------------- | -------- |
-| `connectionPooling=true` (default) | ~4-5 minutes | Individual LDAP query per user |
-| `connectionPooling=false` | ~50 seconds | Paginated bulk LDAP queries |
-
-**Root cause**: With connection pooling enabled, Keycloak validates each federated user against LDAP individually, resulting in thousands of LDAP queries. Disabling connection pooling changes this behavior to use efficient paginated bulk queries.
-
-**Recommended LDAP federation settings**:
-
-```
-connectionPooling=false
-cachePolicy=DEFAULT
-importEnabled=true
-pagination=true
-batchSizeForSync=1000
-```
-
-Additionally, disable `always.read.value.from.ldap` on attribute mappers (first name, last name, modify date, creation date) for better performance.
-
-**Note**: Individual user lookups (`openstack user show <username> --domain <domain>`) remain fast (~2-3 seconds) regardless of connection pooling settings.
 
 ## Testing
 
