@@ -124,46 +124,17 @@ class Driver(base.IdentityDriverBase):
             f"realm-management roles. Full error: {original_error}"
         )
 
-    def _build_user_query_from_hints(self, hints):
+    def _build_query_from_hints(self, hints, query_key, entity_type):
         """Build Keycloak query parameters from Keystone driver hints.
 
-        Converts Keystone 'name' filter to Keycloak 'username' query parameter.
-        Keystone only filters users by name (username) or id in practice.
+        Args:
+            hints: Keystone driver hints object
+            query_key: Keycloak query parameter name ('username' for users,
+                       'search' for groups)
+            entity_type: Entity type for logging ('user' or 'group')
 
         Returns:
-            dict: Query parameters for Keycloak get_users API
-            list: List of filter names that were processed (to mark as satisfied)
-        """
-        query = {}
-        processed_filters = []
-
-        if not hints:
-            return query, processed_filters
-
-        for filt in hints.filters:
-            filter_name = filt.get("name")
-            filter_value = filt.get("value")
-            comparator = filt.get("comparator", "equals")
-
-            # Only handle 'name' filter - Keystone uses this for username lookups
-            if filter_name == "name" and filter_value:
-                if comparator == "equals":
-                    query["username"] = filter_value
-                    query["exact"] = True
-                    processed_filters.append(filter_name)
-                    LOG.debug("Added exact username filter: %s", filter_value)
-                elif comparator in ("contains", "startswith"):
-                    query["username"] = filter_value
-                    processed_filters.append(filter_name)
-                    LOG.debug("Added prefix username filter: %s", filter_value)
-
-        return query, processed_filters
-
-    def _build_group_query_from_hints(self, hints):
-        """Build Keycloak query parameters from Keystone driver hints for groups.
-
-        Returns:
-            dict: Query parameters for Keycloak get_groups API
+            dict: Query parameters for Keycloak API
             list: List of filter names that were processed
         """
         query = {}
@@ -179,14 +150,14 @@ class Driver(base.IdentityDriverBase):
 
             if filter_name == "name" and filter_value:
                 if comparator == "equals":
-                    query["search"] = filter_value
+                    query[query_key] = filter_value
                     query["exact"] = True
                     processed_filters.append(filter_name)
-                    LOG.debug("Added exact group filter: name=%s", filter_value)
+                    LOG.debug("Added exact %s filter: %s", entity_type, filter_value)
                 elif comparator in ("contains", "startswith"):
-                    query["search"] = filter_value
+                    query[query_key] = filter_value
                     processed_filters.append(filter_name)
-                    LOG.debug("Added prefix group filter: name=%s", filter_value)
+                    LOG.debug("Added prefix %s filter: %s", entity_type, filter_value)
 
         return query, processed_filters
 
@@ -326,7 +297,9 @@ class Driver(base.IdentityDriverBase):
 
     def list_users(self, hints):
         # Build query from hints for server-side filtering
-        query, processed_filters = self._build_user_query_from_hints(hints)
+        query, processed_filters = self._build_query_from_hints(
+            hints, "username", "user"
+        )
 
         # Always use briefRepresentation for better performance
         query["briefRepresentation"] = True
@@ -426,7 +399,9 @@ class Driver(base.IdentityDriverBase):
 
     def list_groups(self, hints):
         # Build query from hints for server-side filtering
-        query, processed_filters = self._build_group_query_from_hints(hints)
+        query, processed_filters = self._build_query_from_hints(
+            hints, "search", "group"
+        )
 
         # Always use briefRepresentation for better performance
         query["briefRepresentation"] = True
@@ -438,7 +413,6 @@ class Driver(base.IdentityDriverBase):
 
     def list_groups_for_user(self, user_id, hints):
         user_id = uuid.UUID(user_id)
-        # Single API call - user's group membership is typically a small result set
         groups = self._keycloak_with_retry(self.keycloak.get_user_groups, user_id)
         return self._format_groups(groups)
 
