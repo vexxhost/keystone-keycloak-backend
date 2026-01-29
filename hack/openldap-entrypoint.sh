@@ -7,13 +7,24 @@ LDAP_PID=$!
 
 # Wait for LDAP to be ready
 echo "Waiting for OpenLDAP to start..."
+LDAP_READY=0
 for i in $(seq 1 30); do
     if ldapsearch -x -H ldap://localhost:1389 -b "dc=example,dc=com" -s base "(objectclass=*)" >/dev/null 2>&1; then
         echo "OpenLDAP is ready"
+        LDAP_READY=1
         break
     fi
     sleep 1
 done
+
+if [ "$LDAP_READY" -ne 1 ]; then
+    echo "Error: OpenLDAP did not become ready within the timeout period." >&2
+    if kill -0 "$LDAP_PID" 2>/dev/null; then
+        kill "$LDAP_PID" 2>/dev/null || true
+    fi
+    wait "$LDAP_PID" 2>/dev/null || true
+    exit 1
+fi
 
 # Increase size limit to 10000
 echo "Increasing LDAP size limit to 10000..."

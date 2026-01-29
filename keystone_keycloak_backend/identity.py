@@ -135,13 +135,11 @@ class Driver(base.IdentityDriverBase):
 
         Returns:
             dict: Query parameters for Keycloak API
-            list: List of filter names that were processed
         """
         query = {}
-        processed_filters = []
 
         if not hints:
-            return query, processed_filters
+            return query
 
         for filt in hints.filters:
             filter_name = filt.get("name")
@@ -152,14 +150,12 @@ class Driver(base.IdentityDriverBase):
                 if comparator == "equals":
                     query[query_key] = filter_value
                     query["exact"] = True
-                    processed_filters.append(filter_name)
                     LOG.debug("Added exact %s filter: %s", entity_type, filter_value)
                 elif comparator in ("contains", "startswith"):
                     query[query_key] = filter_value
-                    processed_filters.append(filter_name)
                     LOG.debug("Added prefix %s filter: %s", entity_type, filter_value)
 
-        return query, processed_filters
+        return query
 
     def _keycloak_call_with_auth_retry(self, operation, *args, **kwargs):
         """Execute Keycloak operation with automatic retry on authentication errors."""
@@ -296,12 +292,7 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users(self, hints):
-        # Build query from hints for server-side filtering
-        query, processed_filters = self._build_query_from_hints(
-            hints, "username", "user"
-        )
-
-        # Always use briefRepresentation for better performance
+        query = self._build_query_from_hints(hints, "username", "user")
         query["briefRepresentation"] = True
 
         users = self._keycloak_with_retry(self.keycloak.get_users, query=query)
@@ -316,7 +307,11 @@ class Driver(base.IdentityDriverBase):
         group_id = uuid.UUID(group_id)
 
         try:
-            users = self._keycloak_with_retry(self.keycloak.get_group_members, group_id)
+            users = self._keycloak_with_retry(
+                self.keycloak.get_group_members,
+                group_id,
+                query={"briefRepresentation": True},
+            )
         except keycloak_exceptions.KeycloakGetError as e:
             if e.response_code == 404:
                 raise exception.GroupNotFound(group_id=group_id)
@@ -398,13 +393,7 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_groups(self, hints):
-        # Build query from hints for server-side filtering
-        query, processed_filters = self._build_query_from_hints(
-            hints, "search", "group"
-        )
-
-        # Always use briefRepresentation for better performance
-        query["briefRepresentation"] = True
+        query = self._build_query_from_hints(hints, "search", "group")
 
         groups = self._keycloak_with_retry(self.keycloak.get_groups, query=query)
         LOG.debug("Query returned %d groups", len(groups))
