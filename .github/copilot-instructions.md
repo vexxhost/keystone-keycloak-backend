@@ -34,7 +34,7 @@ poetry run isort .
 
 Run flake8 to check for code style issues:
 ```bash
-flake8 .
+poetry run flake8 .
 ```
 
 Note: The maximum line length is configured to 120 characters in `.flake8`.
@@ -57,7 +57,7 @@ poetry build
 
 To run all checks at once, you can use this command sequence:
 ```bash
-poetry run black . && poetry run isort . && flake8 . && poetry run pytest tests/ -v --cov=keystone_keycloak_backend --cov-report=term-missing && poetry build
+poetry run black . && poetry run isort . && poetry run flake8 . && poetry run pytest tests/ -v --cov=keystone_keycloak_backend --cov-report=term-missing && poetry build
 ```
 
 ## Python Version Support
