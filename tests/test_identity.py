@@ -988,7 +988,7 @@ class TestListUsersWithHints:
             }
         ]
 
-        result = direct_grant_driver.list_users(None)
+        direct_grant_driver.list_users(None)
 
         # Should call get_users with briefRepresentation only
         mock_retry.assert_called_once()
@@ -1008,7 +1008,7 @@ class TestListUsersWithHints:
         hints = Hints()
         hints.add_filter("name", "testuser", comparator="equals")
 
-        result = direct_grant_driver.list_users(hints)
+        direct_grant_driver.list_users(hints)
 
         # Should include username, exact, and briefRepresentation
         call_args = mock_retry.call_args
@@ -1026,7 +1026,7 @@ class TestListUsersWithHints:
         hints = Hints()
         hints.add_filter("name", "test", comparator="contains")
 
-        result = direct_grant_driver.list_users(hints)
+        direct_grant_driver.list_users(hints)
 
         # Should include username and briefRepresentation, no exact flag
         call_args = mock_retry.call_args
@@ -1068,7 +1068,7 @@ class TestListGroupsWithHints:
             }
         ]
 
-        result = direct_grant_driver.list_groups(None)
+        direct_grant_driver.list_groups(None)
 
         # Should call get_groups with empty query
         mock_retry.assert_called_once()
@@ -1088,7 +1088,7 @@ class TestListGroupsWithHints:
         hints = Hints()
         hints.add_filter("name", "testgroup", comparator="equals")
 
-        result = direct_grant_driver.list_groups(hints)
+        direct_grant_driver.list_groups(hints)
 
         # Should include search and exact parameters
         call_args = mock_retry.call_args
@@ -1102,7 +1102,7 @@ class TestListGroupsWithHints:
         hints = Hints()
         hints.add_filter("name", "test", comparator="startswith")
 
-        result = direct_grant_driver.list_groups(hints)
+        direct_grant_driver.list_groups(hints)
 
         # Should include search but no exact flag
         call_args = mock_retry.call_args
