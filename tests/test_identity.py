@@ -848,3 +848,286 @@ class TestFormatUser:
         assert formatted_user["id"] == expected_hex
         assert len(formatted_user["id"]) == 32  # Standard UUID hex length
         assert "-" not in formatted_user["id"]  # No hyphens
+
+
+class MockHints:
+    """Mock Keystone driver hints object for testing."""
+
+    def __init__(self):
+        self.filters = []
+
+    def add_filter(self, name, value, comparator="equals", case_sensitive=False):
+        """Add a filter to the filters list."""
+        self.filters.append(
+            {
+                "name": name,
+                "value": value,
+                "comparator": comparator,
+                "case_sensitive": case_sensitive,
+            }
+        )
+
+
+class TestBuildQueryFromHints:
+    """Test cases for _build_query_from_hints method."""
+
+    def test_build_query_no_hints(self, direct_grant_driver):
+        """Test query building with no hints."""
+        query = direct_grant_driver._build_query_from_hints(None, "username", "user")
+        assert query == {}
+
+    def test_build_query_empty_hints(self, direct_grant_driver):
+        """Test query building with empty hints."""
+        hints = MockHints()
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+        assert query == {}
+
+    def test_build_query_equals_comparator(self, direct_grant_driver):
+        """Test query building with equals comparator."""
+        hints = MockHints()
+        hints.add_filter("name", "testuser", comparator="equals")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        assert query["username"] == "testuser"
+        assert query["exact"] is True
+
+    def test_build_query_contains_comparator(self, direct_grant_driver):
+        """Test query building with contains comparator."""
+        hints = MockHints()
+        hints.add_filter("name", "test", comparator="contains")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        assert query["username"] == "test"
+        assert "exact" not in query
+
+    def test_build_query_startswith_comparator(self, direct_grant_driver):
+        """Test query building with startswith comparator."""
+        hints = MockHints()
+        hints.add_filter("name", "test", comparator="startswith")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        assert query["username"] == "test"
+        assert "exact" not in query
+
+    def test_build_query_unsupported_comparator(self, direct_grant_driver):
+        """Test query building with unsupported comparator is ignored."""
+        hints = MockHints()
+        hints.add_filter("name", "test", comparator="endswith")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        # Unsupported comparator should be ignored
+        assert query == {}
+
+    def test_build_query_non_name_filter(self, direct_grant_driver):
+        """Test query building with non-name filter is ignored."""
+        hints = MockHints()
+        hints.add_filter("enabled", True, comparator="equals")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        # Non-name filters are not supported
+        assert query == {}
+
+    def test_build_query_multiple_filters_same_field(self, direct_grant_driver):
+        """Test query building with multiple filters for same field.
+
+        When multiple filters exist for the same field, query parameters get
+        overwritten. The username from the last filter is used, but the exact
+        flag from the first filter persists. This documents current behavior.
+        """
+        hints = MockHints()
+        hints.add_filter("name", "firstvalue", comparator="equals")
+        hints.add_filter("name", "secondvalue", comparator="contains")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        # Last filter's value wins, but exact flag from first filter persists
+        assert query["username"] == "secondvalue"
+        assert query["exact"] is True  # From first filter
+
+    def test_build_query_empty_value(self, direct_grant_driver):
+        """Test query building with empty filter value."""
+        hints = MockHints()
+        hints.add_filter("name", "", comparator="equals")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        # Empty value should be ignored
+        assert query == {}
+
+    def test_build_query_none_value(self, direct_grant_driver):
+        """Test query building with None filter value."""
+        hints = MockHints()
+        hints.add_filter("name", None, comparator="equals")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        # None value should be ignored
+        assert query == {}
+
+    def test_build_query_for_groups(self, direct_grant_driver):
+        """Test query building for groups uses 'search' parameter."""
+        hints = MockHints()
+        hints.add_filter("name", "testgroup", comparator="equals")
+
+        query = direct_grant_driver._build_query_from_hints(hints, "search", "group")
+
+        assert query["search"] == "testgroup"
+        assert query["exact"] is True
+
+    def test_build_query_case_sensitive_ignored(self, direct_grant_driver):
+        """Test case_sensitive flag is currently ignored."""
+        hints = MockHints()
+        hints.add_filter("name", "TestUser", comparator="equals", case_sensitive=True)
+
+        query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
+
+        # case_sensitive is ignored in current implementation
+        assert query["username"] == "TestUser"
+        assert query["exact"] is True
+
+
+class TestListUsersWithHints:
+    """Test cases for list_users method with hints."""
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_users_no_hints(self, mock_retry, direct_grant_driver):
+        """Test list_users with no hints."""
+        mock_retry.return_value = [
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "username": "user1",
+                "enabled": True,
+            }
+        ]
+
+        result = direct_grant_driver.list_users(None)
+
+        # Should call get_users with briefRepresentation only
+        mock_retry.assert_called_once()
+        call_args = mock_retry.call_args
+        assert call_args[1]["query"] == {"briefRepresentation": True}
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_users_with_equals_filter(self, mock_retry, direct_grant_driver):
+        """Test list_users with equals filter."""
+        mock_retry.return_value = [
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "username": "testuser",
+                "enabled": True,
+            }
+        ]
+        hints = MockHints()
+        hints.add_filter("name", "testuser", comparator="equals")
+
+        result = direct_grant_driver.list_users(hints)
+
+        # Should include username, exact, and briefRepresentation
+        call_args = mock_retry.call_args
+        expected_query = {
+            "username": "testuser",
+            "exact": True,
+            "briefRepresentation": True,
+        }
+        assert call_args[1]["query"] == expected_query
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_users_with_contains_filter(self, mock_retry, direct_grant_driver):
+        """Test list_users with contains filter."""
+        mock_retry.return_value = []
+        hints = MockHints()
+        hints.add_filter("name", "test", comparator="contains")
+
+        result = direct_grant_driver.list_users(hints)
+
+        # Should include username and briefRepresentation, no exact flag
+        call_args = mock_retry.call_args
+        expected_query = {"username": "test", "briefRepresentation": True}
+        assert call_args[1]["query"] == expected_query
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_users_formats_results(self, mock_retry, direct_grant_driver):
+        """Test list_users formats returned users."""
+        mock_retry.return_value = [
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "username": "user1",
+                "enabled": True,
+                "email": "user1@example.com",
+            }
+        ]
+
+        result = direct_grant_driver.list_users(None)
+
+        # Verify formatting is applied
+        assert len(result) == 1
+        assert result[0]["id"] == "123e4567e89b12d3a456426614174000"  # No hyphens
+        assert result[0]["name"] == "user1"
+        assert result[0]["email"] == "user1@example.com"
+
+
+class TestListGroupsWithHints:
+    """Test cases for list_groups method with hints."""
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_groups_no_hints(self, mock_retry, direct_grant_driver):
+        """Test list_groups with no hints."""
+        mock_retry.return_value = [
+            {"id": "123e4567-e89b-12d3-a456-426614174000", "name": "group1", "path": "/group1"}
+        ]
+
+        result = direct_grant_driver.list_groups(None)
+
+        # Should call get_groups with empty query
+        mock_retry.assert_called_once()
+        call_args = mock_retry.call_args
+        assert call_args[1]["query"] == {}
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_groups_with_equals_filter(self, mock_retry, direct_grant_driver):
+        """Test list_groups with equals filter."""
+        mock_retry.return_value = [
+            {"id": "123e4567-e89b-12d3-a456-426614174000", "name": "testgroup", "path": "/testgroup"}
+        ]
+        hints = MockHints()
+        hints.add_filter("name", "testgroup", comparator="equals")
+
+        result = direct_grant_driver.list_groups(hints)
+
+        # Should include search and exact parameters
+        call_args = mock_retry.call_args
+        expected_query = {"search": "testgroup", "exact": True}
+        assert call_args[1]["query"] == expected_query
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_groups_with_startswith_filter(self, mock_retry, direct_grant_driver):
+        """Test list_groups with startswith filter."""
+        mock_retry.return_value = []
+        hints = MockHints()
+        hints.add_filter("name", "test", comparator="startswith")
+
+        result = direct_grant_driver.list_groups(hints)
+
+        # Should include search but no exact flag
+        call_args = mock_retry.call_args
+        expected_query = {"search": "test"}
+        assert call_args[1]["query"] == expected_query
+
+    @patch.object(Driver, "_keycloak_with_retry")
+    def test_list_groups_formats_results(self, mock_retry, direct_grant_driver):
+        """Test list_groups formats returned groups."""
+        mock_retry.return_value = [
+            {"id": "123e4567-e89b-12d3-a456-426614174000", "name": "group1", "path": "/group1"}
+        ]
+
+        result = direct_grant_driver.list_groups(None)
+
+        # Verify formatting is applied
+        assert len(result) == 1
+        assert result[0]["id"] == "123e4567e89b12d3a456426614174000"  # No hyphens
+        assert result[0]["name"] == "group1"
