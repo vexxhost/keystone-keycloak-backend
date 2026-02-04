@@ -3,10 +3,12 @@
 
 import logging
 import uuid
+from typing import Optional
 
 from keycloak import KeycloakAdmin
 from keycloak import exceptions as keycloak_exceptions
 from keystone import exception
+from keystone.common.driver_hints import Hints
 from keystone.identity.backends import base
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt
 
@@ -124,11 +126,17 @@ class Driver(base.IdentityDriverBase):
             f"realm-management roles. Full error: {original_error}"
         )
 
-    def _build_query_from_hints(self, hints, query_key, entity_type):
+    def _build_query_from_hints(
+        self, hints: Optional[Hints], query_key: str, entity_type: str
+    ) -> dict:
         """Build Keycloak query parameters from Keystone driver hints.
 
+        Keystone passes hints as a Hints object (keystone.common.driver_hints.Hints).
+        The hints.filters attribute is a list of dictionaries, where each filter
+        dictionary contains: 'name', 'value', 'comparator', and 'case_sensitive'.
+
         Args:
-            hints: Keystone driver hints object
+            hints: Keystone driver hints object containing filters
             query_key: Keycloak query parameter name ('username' for users,
                        'search' for groups)
             entity_type: Entity type for logging ('user' or 'group')
@@ -291,7 +299,7 @@ class Driver(base.IdentityDriverBase):
     def create_user(self, user_id, user):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
-    def list_users(self, hints):
+    def list_users(self, hints: Hints):
         query = self._build_query_from_hints(hints, "username", "user")
         query["briefRepresentation"] = True
 
@@ -303,7 +311,7 @@ class Driver(base.IdentityDriverBase):
     def unset_default_project_id(self, project_id):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
-    def list_users_in_group(self, group_id, hints):
+    def list_users_in_group(self, group_id, hints: Hints):
         group_id = uuid.UUID(group_id)
 
         try:
@@ -392,7 +400,7 @@ class Driver(base.IdentityDriverBase):
     def create_group(self, group_id, group):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
-    def list_groups(self, hints):
+    def list_groups(self, hints: Hints):
         query = self._build_query_from_hints(hints, "search", "group")
 
         groups = self._keycloak_with_retry(self.keycloak.get_groups, query=query)
@@ -400,7 +408,7 @@ class Driver(base.IdentityDriverBase):
 
         return self._format_groups(groups)
 
-    def list_groups_for_user(self, user_id, hints):
+    def list_groups_for_user(self, user_id, hints: Hints):
         user_id = uuid.UUID(user_id)
         groups = self._keycloak_with_retry(self.keycloak.get_user_groups, user_id)
         return self._format_groups(groups)
