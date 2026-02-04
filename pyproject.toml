@@ -9,8 +9,8 @@ packages = [{include = "keystone_keycloak_backend"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-python-keycloak = "^3.6.1"
-tenacity = ">=6.3.1,<9.2.0"
+python-keycloak = ">=3.6.1"
+tenacity = ">=6.3.1"
 
 [tool.poetry.group.dev.dependencies]
 keystone = ">=22.0.0"
