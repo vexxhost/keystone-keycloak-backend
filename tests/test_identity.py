@@ -8,6 +8,7 @@ Unit tests for the Keycloak identity backend driver.
 from unittest.mock import Mock, patch
 
 import pytest
+from keystone.common.driver_hints import Hints
 
 from keystone_keycloak_backend.identity import Driver
 
@@ -850,24 +851,6 @@ class TestFormatUser:
         assert "-" not in formatted_user["id"]  # No hyphens
 
 
-class MockHints:
-    """Mock Keystone driver hints object for testing."""
-
-    def __init__(self):
-        self.filters = []
-
-    def add_filter(self, name, value, comparator="equals", case_sensitive=False):
-        """Add a filter to the filters list."""
-        self.filters.append(
-            {
-                "name": name,
-                "value": value,
-                "comparator": comparator,
-                "case_sensitive": case_sensitive,
-            }
-        )
-
-
 class TestBuildQueryFromHints:
     """Test cases for _build_query_from_hints method."""
 
@@ -878,13 +861,13 @@ class TestBuildQueryFromHints:
 
     def test_build_query_empty_hints(self, direct_grant_driver):
         """Test query building with empty hints."""
-        hints = MockHints()
+        hints = Hints()
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
         assert query == {}
 
     def test_build_query_equals_comparator(self, direct_grant_driver):
         """Test query building with equals comparator."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "testuser", comparator="equals")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -894,7 +877,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_contains_comparator(self, direct_grant_driver):
         """Test query building with contains comparator."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "test", comparator="contains")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -904,7 +887,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_startswith_comparator(self, direct_grant_driver):
         """Test query building with startswith comparator."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "test", comparator="startswith")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -914,7 +897,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_unsupported_comparator(self, direct_grant_driver):
         """Test query building with unsupported comparator is ignored."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "test", comparator="endswith")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -924,7 +907,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_non_name_filter(self, direct_grant_driver):
         """Test query building with non-name filter is ignored."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("enabled", True, comparator="equals")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -939,7 +922,7 @@ class TestBuildQueryFromHints:
         overwritten. The username from the last filter is used, but the exact
         flag from the first filter persists. This documents current behavior.
         """
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "firstvalue", comparator="equals")
         hints.add_filter("name", "secondvalue", comparator="contains")
 
@@ -951,7 +934,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_empty_value(self, direct_grant_driver):
         """Test query building with empty filter value."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "", comparator="equals")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -961,7 +944,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_none_value(self, direct_grant_driver):
         """Test query building with None filter value."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", None, comparator="equals")
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -971,7 +954,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_for_groups(self, direct_grant_driver):
         """Test query building for groups uses 'search' parameter."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "testgroup", comparator="equals")
 
         query = direct_grant_driver._build_query_from_hints(hints, "search", "group")
@@ -981,7 +964,7 @@ class TestBuildQueryFromHints:
 
     def test_build_query_case_sensitive_ignored(self, direct_grant_driver):
         """Test case_sensitive flag is currently ignored."""
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "TestUser", comparator="equals", case_sensitive=True)
 
         query = direct_grant_driver._build_query_from_hints(hints, "username", "user")
@@ -1022,7 +1005,7 @@ class TestListUsersWithHints:
                 "enabled": True,
             }
         ]
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "testuser", comparator="equals")
 
         result = direct_grant_driver.list_users(hints)
@@ -1040,7 +1023,7 @@ class TestListUsersWithHints:
     def test_list_users_with_contains_filter(self, mock_retry, direct_grant_driver):
         """Test list_users with contains filter."""
         mock_retry.return_value = []
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "test", comparator="contains")
 
         result = direct_grant_driver.list_users(hints)
@@ -1102,7 +1085,7 @@ class TestListGroupsWithHints:
                 "path": "/testgroup",
             }
         ]
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "testgroup", comparator="equals")
 
         result = direct_grant_driver.list_groups(hints)
@@ -1116,7 +1099,7 @@ class TestListGroupsWithHints:
     def test_list_groups_with_startswith_filter(self, mock_retry, direct_grant_driver):
         """Test list_groups with startswith filter."""
         mock_retry.return_value = []
-        hints = MockHints()
+        hints = Hints()
         hints.add_filter("name", "test", comparator="startswith")
 
         result = direct_grant_driver.list_groups(hints)
