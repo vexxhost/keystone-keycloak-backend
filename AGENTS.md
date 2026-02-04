@@ -1,4 +1,6 @@
-# GitHub Copilot Instructions
+# AGENTS.md - Keycloak Backend for OpenStack Keystone
+
+This repository provides a Keycloak backend for OpenStack Keystone, enabling Keycloak as an identity provider for users and groups.
 
 ## Running Tests Locally Before Pushing
 
