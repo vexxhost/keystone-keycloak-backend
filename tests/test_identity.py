@@ -1078,7 +1078,11 @@ class TestListGroupsWithHints:
     def test_list_groups_no_hints(self, mock_retry, direct_grant_driver):
         """Test list_groups with no hints."""
         mock_retry.return_value = [
-            {"id": "123e4567-e89b-12d3-a456-426614174000", "name": "group1", "path": "/group1"}
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "name": "group1",
+                "path": "/group1",
+            }
         ]
 
         result = direct_grant_driver.list_groups(None)
@@ -1092,7 +1096,11 @@ class TestListGroupsWithHints:
     def test_list_groups_with_equals_filter(self, mock_retry, direct_grant_driver):
         """Test list_groups with equals filter."""
         mock_retry.return_value = [
-            {"id": "123e4567-e89b-12d3-a456-426614174000", "name": "testgroup", "path": "/testgroup"}
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "name": "testgroup",
+                "path": "/testgroup",
+            }
         ]
         hints = MockHints()
         hints.add_filter("name", "testgroup", comparator="equals")
@@ -1122,7 +1130,11 @@ class TestListGroupsWithHints:
     def test_list_groups_formats_results(self, mock_retry, direct_grant_driver):
         """Test list_groups formats returned groups."""
         mock_retry.return_value = [
-            {"id": "123e4567-e89b-12d3-a456-426614174000", "name": "group1", "path": "/group1"}
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "name": "group1",
+                "path": "/group1",
+            }
         ]
 
         result = direct_grant_driver.list_groups(None)
