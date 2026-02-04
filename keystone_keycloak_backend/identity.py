@@ -3,7 +3,6 @@
 
 import logging
 import uuid
-from typing import Optional
 
 from keycloak import KeycloakAdmin
 from keycloak import exceptions as keycloak_exceptions
@@ -127,7 +126,7 @@ class Driver(base.IdentityDriverBase):
         )
 
     def _build_query_from_hints(
-        self, hints: Optional[Hints], query_key: str, entity_type: str
+        self, hints: Hints, query_key: str, entity_type: str
     ) -> dict:
         """Build Keycloak query parameters from Keystone driver hints.
 
