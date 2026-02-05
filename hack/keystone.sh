@@ -30,11 +30,11 @@ driver = keycloak
 
 [keycloak]
 server_url = http://keycloak:8080
+realm_name = test2
+client_id = admin-cli
 username = admin
 password = admin
-realm_name = test2
 user_realm_name = master
-client_id = admin-cli
 EOF
 
 /var/lib/openstack/bin/keystone-manage fernet_setup \
@@ -98,4 +98,5 @@ exec uwsgi \
   --lazy \
   --uid keystone \
   --gid keystone \
-  --http-socket 0.0.0.0:5000
+  --http-socket 0.0.0.0:5000 \
+  --processes 4

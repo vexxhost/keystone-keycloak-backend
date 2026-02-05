@@ -13,6 +13,21 @@ services:
       timeout: 5s
       retries: 3
 
+  ldap:
+    image: bitnamilegacy/openldap:2.6.6
+    ports:
+      - 1389:1389
+    environment:
+      LDAP_ROOT: dc=example,dc=com
+      LDAP_ADMIN_USERNAME: admin
+      LDAP_ADMIN_PASSWORD: adminpassword
+      LDAP_CUSTOM_LDIF_DIR: /ldifs
+    volumes:
+      - ./hack/openldap-users.ldif:/ldifs/users.ldif:ro
+      - ./hack/openldap-entrypoint.sh:/openldap-entrypoint.sh:ro
+      - ldap_data:/bitnami/openldap
+    entrypoint: ["/bin/bash", "/openldap-entrypoint.sh"]
+
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.5-0
     ports:
@@ -20,9 +35,17 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_LOCAL_USER_COUNT: ${KEYCLOAK_LOCAL_USER_COUNT:-1000}
+      KEYCLOAK_LOCAL_GROUP_COUNT: ${KEYCLOAK_LOCAL_GROUP_COUNT:-1000}
+      KEYCLOAK_LOAD_LOCAL_DATA: ${KEYCLOAK_LOAD_LOCAL_DATA:-false}
+      KEYCLOAK_LOAD_LDAP_DATA: ${KEYCLOAK_LOAD_LDAP_DATA:-false}
+      LDAP_HOST: ldap
+      LDAP_PORT: 1389
     volumes:
       - ./hack/keycloak-init.sh:/opt/keycloak/keycloak-init.sh
     entrypoint: ["/bin/bash", "/opt/keycloak/keycloak-init.sh"]
+    depends_on:
+      - ldap
 
   keystone:
     build: .
@@ -33,3 +56,6 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+
+volumes:
+  ldap_data:

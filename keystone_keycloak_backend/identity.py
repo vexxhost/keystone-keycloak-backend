@@ -124,6 +124,40 @@ class Driver(base.IdentityDriverBase):
             f"realm-management roles. Full error: {original_error}"
         )
 
+    def _build_query_from_hints(self, hints, query_key, entity_type):
+        """Build Keycloak query parameters from Keystone driver hints.
+
+        Args:
+            hints: Keystone driver hints object
+            query_key: Keycloak query parameter name ('username' for users,
+                       'search' for groups)
+            entity_type: Entity type for logging ('user' or 'group')
+
+        Returns:
+            dict: Query parameters for Keycloak API
+        """
+        query = {}
+
+        if not hints:
+            return query
+
+        for filt in hints.filters:
+            filter_name = filt.get("name")
+            filter_value = filt.get("value")
+            comparator = filt.get("comparator", "equals")
+
+            if filter_name == "name" and filter_value:
+                if comparator == "equals":
+                    query[query_key] = filter_value
+                    query["exact"] = True
+                    LOG.debug("Added exact %s filter: %s", entity_type, filter_value)
+                elif comparator in ("contains", "startswith"):
+                    query[query_key] = filter_value
+                    query.pop("exact", None)
+                    LOG.debug("Added prefix %s filter: %s", entity_type, filter_value)
+
+        return query
+
     def _keycloak_call_with_auth_retry(self, operation, *args, **kwargs):
         """Execute Keycloak operation with automatic retry on authentication errors."""
         for attempt in Retrying(
@@ -259,19 +293,26 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users(self, hints):
-        # TODO(mnaser): Hints
-        users = self._keycloak_with_retry(self.keycloak.get_users)
+        query = self._build_query_from_hints(hints, "username", "user")
+        query["briefRepresentation"] = True
+
+        users = self._keycloak_with_retry(self.keycloak.get_users, query=query)
+        LOG.debug("Query returned %d users", len(users))
+
         return [self._format_user(u) for u in users]
 
     def unset_default_project_id(self, project_id):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_users_in_group(self, group_id, hints):
-        # TODO: hints
         group_id = uuid.UUID(group_id)
 
         try:
-            users = self._keycloak_with_retry(self.keycloak.get_group_members, group_id)
+            users = self._keycloak_with_retry(
+                self.keycloak.get_group_members,
+                group_id,
+                query={"briefRepresentation": True},
+            )
         except keycloak_exceptions.KeycloakGetError as e:
             if e.response_code == 404:
                 raise exception.GroupNotFound(group_id=group_id)
@@ -353,12 +394,16 @@ class Driver(base.IdentityDriverBase):
         raise exception.Forbidden(READ_ONLY_ERROR_MESSAGE)
 
     def list_groups(self, hints):
-        # TODO: hints
-        groups = self._keycloak_with_retry(self.keycloak.get_groups)
+        query = self._build_query_from_hints(hints, "search", "group")
+        # NOTE: briefRepresentation is intentionally not used here because
+        # _format_groups() needs access to subGroups to flatten the hierarchy.
+
+        groups = self._keycloak_with_retry(self.keycloak.get_groups, query=query)
+        LOG.debug("Query returned %d groups", len(groups))
+
         return self._format_groups(groups)
 
     def list_groups_for_user(self, user_id, hints):
-        # TODO: hints
         user_id = uuid.UUID(user_id)
         groups = self._keycloak_with_retry(self.keycloak.get_user_groups, user_id)
         return self._format_groups(groups)
