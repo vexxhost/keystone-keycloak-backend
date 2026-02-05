@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.4.0...v0.5.0) (2026-02-05)
+
+
+### Features
+
+* add more documentation and findings ([462bdd1](https://github.com/vexxhost/keystone-keycloak-backend/commit/462bdd1bf6f10f1300a3259dddf919efa4bb7227))
+* add pagination support ([043ad04](https://github.com/vexxhost/keystone-keycloak-backend/commit/043ad0477ffd40e0a0077b1795f040549ee9d6ce))
+* optimize hint methods ([3c56452](https://github.com/vexxhost/keystone-keycloak-backend/commit/3c56452eba2fdd2edcb8578166e55462a7a89719))
+* use briefRepresentation only for users related methods ([c353ea8](https://github.com/vexxhost/keystone-keycloak-backend/commit/c353ea89a7a2f5c59981785078965d0f0d129c6f))
+
+
+### Bug Fixes
+
+* add flake8 exceptions and make black higher priority ([97fb011](https://github.com/vexxhost/keystone-keycloak-backend/commit/97fb0115f28e73f431e302f8b953fdd4bbe3b3f2))
+* flake8 syntax ([3dc7da7](https://github.com/vexxhost/keystone-keycloak-backend/commit/3dc7da75bdb21e4e69217e1ad101e926218a6d03))
+* remove exact flag when contains/startswith filter overwrites equals ([def7c7b](https://github.com/vexxhost/keystone-keycloak-backend/commit/def7c7b70c13af3958ef63dde2bd89ef165acd6d))
+* remove pagination ([dc96ae3](https://github.com/vexxhost/keystone-keycloak-backend/commit/dc96ae3b5687fc93ad0fcf088df75ebe9f5917e8))
+
+
+### Documentation
+
+* add comment explaining why briefRepresentation is not used for groups ([5c8e012](https://github.com/vexxhost/keystone-keycloak-backend/commit/5c8e012f4acdb3f94e8b166252d87dd2b084a52a))
+
 ## [0.4.0](https://github.com/vexxhost/keystone-keycloak-backend/compare/v0.3.0...v0.4.0) (2025-12-09)
 
 
