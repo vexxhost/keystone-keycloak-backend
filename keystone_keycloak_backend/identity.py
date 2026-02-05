@@ -395,6 +395,8 @@ class Driver(base.IdentityDriverBase):
 
     def list_groups(self, hints):
         query = self._build_query_from_hints(hints, "search", "group")
+        # NOTE: briefRepresentation is intentionally not used here because
+        # _format_groups() needs access to subGroups to flatten the hierarchy.
 
         groups = self._keycloak_with_retry(self.keycloak.get_groups, query=query)
         LOG.debug("Query returned %d groups", len(groups))
