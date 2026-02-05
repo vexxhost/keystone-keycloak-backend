@@ -153,6 +153,7 @@ class Driver(base.IdentityDriverBase):
                     LOG.debug("Added exact %s filter: %s", entity_type, filter_value)
                 elif comparator in ("contains", "startswith"):
                     query[query_key] = filter_value
+                    query.pop("exact", None)
                     LOG.debug("Added prefix %s filter: %s", entity_type, filter_value)
 
         return query

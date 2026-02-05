@@ -760,7 +760,8 @@ class TestBuildQueryFromHints:
 
         # Last filter wins
         assert query["username"] == "second"
-        # Note: exact flag from first filter may persist - this is a known behavior
+        # exact flag should be removed when contains/startswith overwrites equals
+        assert "exact" not in query
 
     def test_unsupported_comparator_ignored(self, direct_grant_driver):
         """Test that unsupported comparators are ignored."""
