@@ -64,7 +64,7 @@ poetry run black . && poetry run isort . && poetry run flake8 . && poetry run py
 
 ## Python Version Support
 
-This project supports Python 3.8, 3.9, 3.10, 3.11, and 3.12. Make sure your changes are compatible with these versions.
+This project supports Python 3.9, 3.10, 3.11, and 3.12. Make sure your changes are compatible with these versions.
 
 ## Testing with Docker Compose
 
