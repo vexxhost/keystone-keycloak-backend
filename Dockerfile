@@ -1,4 +1,4 @@
-FROM registry.atmosphere.dev/library/keystone:2025.2
+FROM registry.atmosphere.dev/library/keystone:2025.2@sha256:5170d0d954c267c56890279b38bebe94f1c8c3eb88d5ff24cc289c1740a7c72e
 
 COPY . /src
 
